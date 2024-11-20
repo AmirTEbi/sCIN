@@ -1,0 +1,45 @@
+{
+    
+    "EXPERIMENT_NAME":"",
+    
+    "DATA_PATHS":{
+
+        "SHARE_RNA":"",
+        "SHARE_ATAC":"",
+
+        "PBMC_RNA":"",
+        "PBMC_ATAC":"",
+
+        "CITE_RNA":"",
+        "CITE_ADT":""
+    },
+
+    "SAVE_PATHS":{
+
+        "scCOOL":"",
+        "MOFA":"",
+        "Harmony":"",
+        "AE":"",
+        "ConAAE":"",
+        "EXP":""
+    },
+
+    "MODEL_NAMES":[
+        "scCOOL",
+        "ConAAE",
+        "Harmony",
+        "MOFA",
+        "AE"
+    ],
+
+    "SETTINGS":{
+
+        "scCOOL":{},
+        "ConAAE":{},
+        "Harmony":{},
+        "MOFA":{},
+        "AE":{}
+    }
+
+
+}
