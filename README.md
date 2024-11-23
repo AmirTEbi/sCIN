@@ -2,5 +2,9 @@
 
 ### To Do:
 
-    - Implement class_lbl_acc() in sc_cool/data_processing/plots.py
-    - MedR results for AE on SHARE data
+    - Add ASW plot for each dataset to the manuscript
+    - Graphical Abstract
+    - Recall@k from RNA -> ATAC
+    - UMAP or tSNE on embeddings
+    - ASW on original data, PCA-transformed data (joint and only), and joint embeddings
+    - Random shuffling of same cell type from another modality --> Compute recall@k --> If good, good for unpaired.
