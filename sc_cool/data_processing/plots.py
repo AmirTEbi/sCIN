@@ -61,7 +61,7 @@ def plot_recall_at_k(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     plt.savefig(save_dir + "\\recall_at_k_" + model_name + ".png")
 
 
-def plot_class_lbl_accuracy(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
+def plot_cell_type_accuracy(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
 
     """
     Plot Class Label Accuracy for each model.
@@ -83,7 +83,30 @@ def plot_class_lbl_accuracy(data:pd.DataFrame, save_dir:str, model_name:str) -> 
 
     """
 
-    raise NotImplementedError
+    colors = {
+        "Ours": "#1f77b4",  
+        "Con-AAE": "#ff7f0e", 
+        "Harmony": "#2ca02c",  
+        "MOFA": "#d62728",  
+        "AE": "#9467bd", 
+    }
+
+    model_colors = data["Models"].map(colors)
+
+    sns.set_theme(style="whitegrid")
+    plt.figure(figsize=(12, 8))
+
+    ax = sns.boxplot(x="Models", y="Class_label_acc", data=data, palette=colors, showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
+
+    plt.title("Models' Performances in Cell Type Accuracy", fontsize=16)
+    plt.xlabel("Model", fontsize=14)
+    plt.ylabel("Cell Type Accuracy", fontsize=14)
+    plt.xticks(rotation=45, fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.tight_layout()
+    plt.savefig(save_dir + "\\cell_type_acc_" + model_name + ".png")
+    
+    
 
 
 def plot_MedR(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
@@ -108,10 +131,20 @@ def plot_MedR(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
 
     """
 
+    colors = {
+        "Ours": "#1f77b4",  
+        "ConAAE": "#ff7f0e", 
+        "Harmony": "#2ca02c",  
+        "MOFA": "#d62728",  
+        "AE": "#9467bd", 
+    }
+
+    model_colors = data["model"].map(colors)
+
     sns.set_theme(style="whitegrid")
     plt.figure(figsize=(12, 8))
 
-    ax = sns.boxplot(x="model", y="MedR", data=data, palette="Set2", showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
+    ax = sns.boxplot(x="model", y="MedR", data=data, palette=colors, showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
 
     plt.title("Model Performances in Median Rank (MedR)", fontsize=16)
     plt.xlabel("Model", fontsize=14)
