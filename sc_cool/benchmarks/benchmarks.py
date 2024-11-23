@@ -3,9 +3,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sc_cool.data_processing.plots import plot_recall_at_k, plot_MedR, plot_class_lbl_accuracy
+from sc_cool.data_processing.plots import plot_recall_at_k, plot_MedR, plot_cell_type_accuracy
 import argparse
-
 
 def main():
 
@@ -26,8 +25,8 @@ def main():
         plot_recall_at_k(data, save_dir=args.save_dir, model_name=args.model_name)
     elif args.measure == "MedR":
         plot_MedR(data, save_dir=args.save_dir, model_name=args.model_name)    
-    elif args.measure == "Class_lbl_Acc":
-        plot_class_lbl_accuracy(data, save_dir=args.save_dir, model_name=args.model_name)
+    elif args.measure == "cell_type_acc":
+        plot_cell_type_accuracy(data, save_dir=args.save_dir, model_name=args.model_name)
 
 
 if __name__ == "__main__":
