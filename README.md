@@ -2,9 +2,11 @@
 
 ### To Do:
 
-    - Add ASW plot for each dataset to the manuscript
-    - Graphical Abstract
     - Recall@k from RNA -> ATAC
+      - Done for Con-AAE, CLIP on PBMC. Done for MOFA on SHARE, PBMC, and CITE.
+    
+    - Transfer labels from MOFA to Harmony and AE.
+    
     - UMAP or tSNE on embeddings
     - ASW on original data, PCA-transformed data (joint and only), and joint embeddings
     - Random shuffling of same cell type from another modality --> Compute recall@k --> If good, good for unpaired.
