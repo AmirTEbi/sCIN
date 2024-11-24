@@ -96,7 +96,8 @@ def plot_cell_type_accuracy(data:pd.DataFrame, save_dir:str, model_name:str) -> 
     sns.set_theme(style="whitegrid")
     plt.figure(figsize=(12, 8))
 
-    ax = sns.boxplot(x="Models", y="Class_label_acc", data=data, palette=colors, showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
+    ax = sns.boxplot(x="Models", y="Class_label_acc", data=data, palette=colors, 
+                     showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
 
     plt.title("Models' Performances in Cell Type Accuracy", fontsize=16)
     plt.xlabel("Model", fontsize=14)
@@ -144,7 +145,8 @@ def plot_MedR(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     sns.set_theme(style="whitegrid")
     plt.figure(figsize=(12, 8))
 
-    ax = sns.boxplot(x="model", y="MedR", data=data, palette=colors, showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
+    ax = sns.boxplot(x="model", y="MedR", data=data, palette=colors, 
+                     showmeans=True, meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
 
     plt.title("Model Performances in Median Rank (MedR)", fontsize=16)
     plt.xlabel("Model", fontsize=14)
@@ -153,3 +155,50 @@ def plot_MedR(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     plt.yticks(fontsize=12)
     plt.tight_layout()
     plt.savefig(save_dir + "\\MedR_" + model_name + ".png")
+
+
+def plot_asw(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
+
+    """
+    Plot Average Silhouette Width (ASW) value for each model.
+
+    Parameters
+    ----------
+    data: pandas.DataFrame
+        A data frame containing Recall@k values.
+
+    save_dir: str
+        Path to save plots.
+
+    model_name: str
+        Name of the model to be include the file name.
+
+    Return
+    ----------
+    None
+
+    """
+
+    colors = {
+        "Ours": "#1f77b4",  
+        "Con-AAE": "#ff7f0e", 
+        "Harmony": "#2ca02c",  
+        "MOFA": "#d62728",  
+        "AE": "#9467bd", 
+    }
+
+    model_colors = data["Models"].map(colors)
+
+    sns.set_theme(style="whitegrid")
+    plt.figure(figsize=(12, 8))
+
+    ax = sns.boxplot(x="Models", y="Cell_type_ASW", data=data, palette=colors, showmeans=True, 
+                     meanprops={"marker": "o", "markerfacecolor": "red", "markeredgecolor": "black"})
+
+    plt.title("Models' Performances in Cell Type Clustering", fontsize=16)
+    plt.xlabel("Model", fontsize=14)
+    plt.ylabel("ASW", fontsize=14)
+    plt.xticks(rotation=45, fontsize=12)
+    plt.yticks(fontsize=12)
+    plt.tight_layout()
+    plt.savefig(save_dir + "\\asw_" + model_name + ".png")
