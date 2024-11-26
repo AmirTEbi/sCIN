@@ -3,7 +3,8 @@ from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
 from sklearn.neighbors import KDTree
 import matplotlib.pyplot as plt 
-from ..models.ConAAE.conAAE import mink
+from sc_cool.models.ConAAE.conAAE import mink
+from typing import Dict, List
 
 
 # Assessment functions
@@ -68,9 +69,11 @@ def ct_recall(ATAC_latent, RNA_latent, ATAC_class_label):
 
     return recall_at_k, number_of_pairs, class_lbl_acc
 
-def ct_recall_v1(ATAC_latent, RNA_latent, ATAC_class_label):
+####################################################################
 
-    cell_num = ATAC_latent.shape[0]
+def compute_metrics(mod1_embs:np.array, mod2_embs:np.array, labels:np.array):
+
+    cell_num = mod1_embs.shape[0]
     pairlist=[]
     classlist=[]
     distlist=[]
@@ -81,11 +84,11 @@ def ct_recall_v1(ATAC_latent, RNA_latent, ATAC_class_label):
     kright40=0
     kright50=0
       
-    for index,i in enumerate(ATAC_latent):
+    for index,i in enumerate(mod1_embs):
       mini=999999
       minindex=0
       distlist.clear()
-      for idx,j in enumerate(RNA_latent):
+      for idx,j in enumerate(mod2_embs):
         dist=np.linalg.norm(i-j)
         distlist.append(dist)
           #print(dist)
@@ -109,7 +112,7 @@ def ct_recall_v1(ATAC_latent, RNA_latent, ATAC_class_label):
         kright50+=1
       flag[minindex]=1
       pairlist.append(minindex)
-      classlist.append(ATAC_class_label[minindex])
+      classlist.append(labels[minindex])
       
     ATAC_seq=np.arange(0,cell_num,1)
       
@@ -129,7 +132,7 @@ def ct_recall_v1(ATAC_latent, RNA_latent, ATAC_class_label):
     recall_at_k[40] = float(kright40)/cell_num
     recall_at_k[50] = float(kright50)/cell_num
     number_of_pairs = float(np.sum(pairlist==ATAC_seq))
-    class_lbl_acc = float(np.sum(ATAC_class_label==classlist)/cell_num)
+    class_lbl_acc = float(np.sum(labels==classlist)/cell_num)
 
     return recall_at_k, number_of_pairs, class_lbl_acc
 
