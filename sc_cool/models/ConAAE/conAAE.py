@@ -4,7 +4,7 @@ import torch.utils.data
 from torch import nn, optim
 from torch.autograd import Variable
 import pandas as pd
-from model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
+from sc_cool.models.ConAAE.model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
 import os
 import argparse
 import time
