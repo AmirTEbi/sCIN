@@ -9,7 +9,7 @@ import networkx as nx
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from typing import Any, Tuple
 
 def impute_cells(labels):
     """Make same-size label arrays
@@ -296,7 +296,7 @@ def read_config(file_path):
     return config
 
 
-def load_data(config): 
+def load_data(config: Any) -> Tuple:
     
     rna = ad.read_h5ad(config["RNA_DIR"])
     atac = ad.read_h5ad(config["ATAC_DIR"])
@@ -384,3 +384,15 @@ def make_plots(results_df, save_dir):
     plt.xlabel('Models')
     plt.ylabel('Mean ASW')
     plt.savefig(save_dir + "/box_model_asw.png")
+
+
+def select_unpaired_cells_by_type(label_indices, bob, rng):
+
+    idx_rna = []
+    idx_atac = []
+    for j in range(bob):
+        for k in label_indices:
+            idx_rna.append(k[rng.integers(0, len(k))])
+            idx_atac.append(k[rng.integers(0, len(k))])
+
+    return idx_rna, idx_atac
