@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 from scipy.sparse import issparse
-from ..sc_cool.utils.utils import (split_full_data,
+from sc_cool.utils.utils import (split_full_data,
                                    split_partial_data,
                                    extract_counts, 
                                    get_func_name, 
@@ -20,24 +20,24 @@ from ..sc_cool.utils.utils import (split_full_data,
                                    train_autoencoders, 
                                    train_classifier, 
                                    make_plots)
-from ..sc_cool.models.sc_cool import (RNAEncoder, 
+from sc_cool.models.sc_cool import (RNAEncoder, 
                                       ATACEncoder, 
                                       scCOOL, train_sccool, 
                                       get_emb_sccool)
-from ..sc_cool.models.AE import (RNAEncoderAE, 
+from sc_cool.models.AE import (RNAEncoderAE, 
                 ATACEncoderAE, 
                 RNADecoder, 
                 ATACDecoder,
                 SimpleAutoEncoder, 
                 train_ae, 
                 get_emb_ae) 
-from ..sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
-from ..sc_cool.models.harmony import (train_hm, get_emb_hm)
-from ..sc_cool.models.mofa import (prepare_data_mofa, 
+from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
+from sc_cool.models.harmony import (train_hm, get_emb_hm)
+from sc_cool.models.mofa import (prepare_data_mofa, 
                                    extract_embs, 
                                    train_mofa, 
                                    get_mofa_emb)
-from ..sc_cool.benchmarks.assess import (ct_recall, assess)
+from sc_cool.benchmarks.assess import (ct_recall, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
