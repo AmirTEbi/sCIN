@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 from sklearn.decomposition import PCA
-from utils import impute_cells
+from sc_cool.utils.utils import impute_cells, select_unpaired_cells_by_type
 
 
 class RNAEncoder(nn.Module):
@@ -204,6 +204,110 @@ def train_sccool(rna_train, atac_train, labels_train, epochs, settings,
                 batch_logits.append(sub_logits)
                 losses = [F.cross_entropy(logit, target) + F.cross_entropy(logit.T, target) \
                           for logit in batch_logits]
+                batch_loss = sum(losses)
+
+            # Update model parameters
+            optimizer.zero_grad()
+            batch_loss.backward()
+            optimizer.step()
+            epoch_loss += batch_loss.item() * num_classes * bob
+            total_samples += num_classes * bob
+
+        # Compute epoch loss
+        epoch_loss /= total_samples
+        print(f"Epoch: {epoch} | Loss: {epoch_loss:.4f}")
+
+    return [cool, pca_rna, pca_atac]
+
+
+def train_sccool_unpaired(rna_train, atac_train, labels_train, epochs, settings,
+                          device=None, **kwargs):
+    
+    t = settings["t"]
+    lr = settings["lr"]
+    hidden_dim = settings["hidden_dim"]
+    latent_dim = settings["latent_dim"]
+    device = device
+    bob = settings["bob"]
+
+    seed = kwargs["seed"]
+
+    # PCA transformations
+    print("PCA transformation ...")
+    pca_rna = PCA(n_components=settings["PCs"])
+    pca_atac =PCA(n_components=settings["PCs"])
+    pca_rna.fit(rna_train)
+    pca_atac.fit(atac_train)
+    rna_train = pca_rna.transform(rna_train)
+    atac_train = pca_atac.transform(atac_train)
+    print("PCA finished.")
+
+    # Arrays to tensors
+    rna_train_t = torch.from_numpy(rna_train)
+    rna_train_t = rna_train_t.to(torch.float32)
+    rna_train_t = rna_train_t.to(device)
+    atac_train_t = torch.from_numpy(atac_train).to(torch.float32)
+    atac_train_t = atac_train_t.to(torch.float32)
+    atac_train_t = atac_train_t.to(device)
+    #labels_train_t = torch.from_numpy(labels_train)
+    #labels_train_t = labels_train_t.to(device)
+
+    num_classes = len(np.unique(labels_train))
+    target = torch.arange(num_classes)
+    target = target.to(device)
+    imputed_indices_by_type = impute_cells(labels_train)
+    ##### DEBUG
+    imputed_indices_by_type[0] == imputed_indices_by_type[1]
+    print(len(imputed_indices_by_type[0]))
+    #####
+    label_indices = []
+    for key in imputed_indices_by_type.keys():
+        label_indices.append(imputed_indices_by_type[key])
+
+    rna_encoder = RNAEncoder(rna_train_t.shape[1], hidden_dim, latent_dim)
+    rna_encoder.to(device)
+    atac_encoder = ATACEncoder(atac_train_t.shape[1], hidden_dim, latent_dim)
+    atac_encoder.to(device)
+    cool = scCOOL(rna_encoder, atac_encoder, t)
+    cool.to(device)
+    optimizer = Adam(cool.parameters(), lr=lr)
+
+    rng = np.random.default_rng(seed=seed)  # For randomness in cell selection within a cell type
+
+    # Training loop
+    for epoch in range(epochs):
+
+        cool.train()
+        epoch_loss = 0.0
+        total_samples = 0
+
+        # Select one cell per cell type in order
+        for i in range(0, len(label_indices[0]), bob):
+
+            idx_rna, idx_atac = select_unpaired_cells_by_type(label_indices, bob, rng)
+
+            rna_l = [rna_train_t[l, :] for l in idx_rna]
+            atac_l = [atac_train_t[m, :] for m in idx_atac]
+            rna_batch = torch.vstack(rna_l)
+            atac_batch = torch.vstack(atac_l)
+
+            # Compute similarity logits
+            logits, _, _ = cool(rna_batch, atac_batch)
+
+            # Select diagonal blocks of logits, compute loss and 
+            # sum losses for all blocks 
+            batch_logits = []
+            block_tensor_shape = (num_classes, num_classes)
+
+            for l in range(bob):
+                start_row = l * block_tensor_shape[0]
+                end_row = start_row + block_tensor_shape[0]
+                start_col = l * block_tensor_shape[1]
+                end_col = start_col + block_tensor_shape[1]
+                sub_logits = logits[start_row:end_row, start_col:end_col]
+                batch_logits.append(sub_logits)
+                losses = [F.cross_entropy(logit, target) + F.cross_entropy(logit.T, target) \
+                            for logit in batch_logits]
                 batch_loss = sum(losses)
 
             # Update model parameters
