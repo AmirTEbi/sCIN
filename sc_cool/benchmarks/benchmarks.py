@@ -75,17 +75,17 @@ def main():
     if args.plot:
 
         # Read data
-        data_path = args.input_dir + "/" + args.metric_file
+        data_path = args.input_dir + "\\" + args.metric_file
         data = pd.read_csv(data_path)
         print(data.head())  
 
-        if args.measure == "recall_at_k":
+        if args.metric == "recall_at_k":
             plot_recall_at_k(data, save_dir=args.save_dir, model_name=args.model_name)
-        elif args.measure == "MedR":
+        elif args.metric == "MedR":
             plot_MedR(data, save_dir=args.save_dir, model_name=args.model_name)    
-        elif args.measure == "cell_type_acc":
+        elif args.metric == "cell_type_acc":
             plot_cell_type_accuracy(data, save_dir=args.save_dir, model_name=args.model_name)
-        elif args.measure == "ASW":
+        elif args.metric == "ASW":
             plot_asw(data, save_dir=args.save_dir, model_name=args.model_name)
 
     print("Finished.")
