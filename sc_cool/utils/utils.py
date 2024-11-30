@@ -9,6 +9,7 @@ import networkx as nx
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
+import anndata as ad
 from typing import Any, Tuple
 
 def impute_cells(labels):
@@ -396,3 +397,15 @@ def select_unpaired_cells_by_type(label_indices, bob, rng):
             idx_atac.append(k[rng.integers(0, len(k))])
 
     return idx_rna, idx_atac
+
+
+def select_cell_types(adata:ad.AnnData, save_dir:str) -> None:
+     
+     cell_types = adata.obs["cell_type"]
+     ct_arr = np.array(cell_types.values)
+     print(ct_arr.shape)
+
+     _, ct_test = train_test_split(ct_arr, test_size=0.3, random_state=0)
+     print(ct_test.shape)
+
+     np.save(save_dir + "/test_cell_types_seed_0.npy", ct_test)
