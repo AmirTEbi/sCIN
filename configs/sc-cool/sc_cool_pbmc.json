@@ -1,0 +1,32 @@
+{
+    "DATA_DIR":{
+
+        "RNA_DIR":"master_thesis/data/10x/10x-Multiome-Pbmc10k-RNA.h5ad",
+        "ATAC_DIR":"master_thesis/data/10x/10x-Multiome-Pbmc10k-ATAC.h5ad"
+    },
+
+    "MODEL_NAMES":["scCOOL"],
+
+    "SETTINGS":
+    {
+        "scCOOL":
+        {
+            "t":0.07,
+            "lr":1e-3,
+            "hidden_dim":256,
+            "latent_dim":128,
+            "bob":149,
+            "EPOCHS":150,
+            "IS_PARTIAL":"False",
+            "PCs":100
+        }
+    },
+
+    "SAVE_DIRS":
+    {
+        "scCOOL":"sc-cool/results/PBMC/scCOOL/embs",
+        "EXP":"sc-cool/results/PBMC/scCOOL"
+    },
+
+    "EXPERIMENT_NAME":"scCOOL_test_unpaired_PBMC_10_Reps"
+}
