@@ -13,9 +13,9 @@ def main():
 
     # Get parameters
     parser = argparse.ArgumentParser(description='Get Parameters')
-    parser.add_argument('input_dir', type=str, help='Data Path')
-    parser.add_argument('save_dir', type=str, help='Save Directory')
-    parser.add_argument('model_name', type=str, help='Model Name')
+    parser.add_argument('--input_dir', type=str, help='Data Path')
+    parser.add_argument('--save_dir', type=str, help='Save Directory')
+    parser.add_argument('--model_name', type=str, help='Model Name', default="all")
     parser.add_argument('--metric', type=str, help='Metric')
     parser.add_argument('--metric_file', type=str, help='Metric file')
     parser.add_argument('--compute', action='store_true', help='Compute metrics')
