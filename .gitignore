@@ -5,6 +5,7 @@ venv/
 .venv/
 
 results/
+Documentation/
 
 .DS_Store
 .env
