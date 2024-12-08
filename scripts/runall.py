@@ -25,12 +25,12 @@ from sc_cool.models.sc_cool import (RNAEncoder,
                                       scCOOL, train_sccool, 
                                       get_emb_sccool)
 from sc_cool.models.AE import (RNAEncoderAE, 
-                ATACEncoderAE, 
-                RNADecoder, 
-                ATACDecoder,
-                SimpleAutoEncoder, 
-                train_ae, 
-                get_emb_ae) 
+                               ATACEncoderAE, 
+                               RNADecoder, 
+                               ATACDecoder,
+                               SimpleAutoEncoder, 
+                               train_ae, 
+                               get_emb_ae) 
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
 from sc_cool.models.harmony import (train_hm, get_emb_hm)
 from sc_cool.models.mofa import (prepare_data_mofa, 
@@ -58,24 +58,25 @@ def main():
     # Read data path from the config file
     parser = argparse.ArgumentParser(description='Get config')
     parser.add_argument('--config_path', type=str, help='config file')
-    parser.add_argument('--seed_range', type=int, help='Range of the random seeds', default=100)
+    parser.add_argument('--seed_range', type=int, help='Range of the random seeds for replication', default=100)
     args = parser.parse_args()
     config = read_config(args.config_path)
 
-    # Load data
+    # Load data 
     mod1, mod2 = load_data(config["DATA_DIR"])
     print("Data has been loaded!")
 
     seeds = list(np.arange(0, args.seed_range, 10))
     print(f"Seeds are: {seeds}")
     
-    results_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "Num_pairs", 
-                                       "Class_label_acc", "Cell_type_ASW"])
+    results_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "num_pairs", 
+                                       "cell_type_acc", "cell_type_ASW"])
 
     # Determine the name of the model to train
     for i, name in enumerate(config["MODEL_NAMES"]):
 
         StartTime = time.time()
+
         model_name = name
         settings = config["SETTINGS"][model_name]
 
@@ -97,31 +98,32 @@ def main():
             print(f"Seed {seed} has been started!")
 
             # To save the results for the current replication
-            results_rep_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "Num_pairs", 
-                                       "Class_label_acc", "Cell_type_ASW"])                
+            results_rep_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "num_pairs", 
+                                                   "cell_type_acc", "cell_type_ASW"])                
 
             # Split data into train and test
             if settings["IS_PARTIAL"] == "True":
 
-                rna_train, rna_test, atac_train, atac_test, \
+                mod1_train, mod1_test, mod2_train, mod2_test, \
                 labels_train, labels_test = split_partial_data(mod1, mod2, proportion=settings["PROPORTION"], seed=seed)
                 
             else:
                 
-                rna_train, rna_test, atac_train, atac_test, \
+                mod1_train, mod1_test, mod2_train, mod2_test, \
                     labels_train, labels_test = split_full_data(mod1, mod2, seed=seed)
 
 
-            print(rna_train.shape)
-            print(atac_train.shape)
-            print(rna_test.shape)
-            print(atac_test.shape)
+            print(mod1_train.shape)
+            print(mod2_train.shape)
+            print(mod1_test.shape)
+            print(mod2_test.shape)
             
             print("Data splitted!")
+            print("***************")
             print(f"Training has been started!")
             TrainTime0 = time.time()
 
-            obj_list = train_func(rna_train, atac_train, labels_train, epochs=epochs,
+            obj_list = train_func(mod1_train, mod2_train, labels_train, epochs=epochs,
                 settings=settings, device=device)
             
             TrainTime1 = time.time()
@@ -129,14 +131,14 @@ def main():
             print("Training has been ended!")
 
             # Get embeddings
-            rna_emb, atac_emb = get_emb_func(rna_test, atac_test, labels_test, obj_list, save_dir=config["SAVE_DIRS"][model_name], seed=seed, device=device)
-            print(f"Shape of RNA embeddings: {rna_emb.shape}")
-            print(f"Shape of ATAC embeddings: {atac_emb.shape}")
+            mod1_emb, mod2_emb = get_emb_func(mod1_test, mod2_test, labels_test, obj_list, save_dir=config["SAVE_DIRS"][model_name], seed=seed, device=device)
+            print(f"Shape of RNA embeddings: {mod1_emb.shape}")
+            print(f"Shape of ATAC embeddings: {mod2_emb.shape}")
             print(f"Embeddings for model {model_name} were generated!")
 
             # Assessment
             print("Assessment has been started!")
-            recall_at_k, num_pairs, class_lbl_acc, asw = assess(rna_emb, atac_emb, labels_test, n_pc=20,
+            recall_at_k, num_pairs, class_lbl_acc, asw = assess(mod1_emb, mod2_emb, labels_test, n_pc=20,
                                             save_path=config["SAVE_DIRS"][model_name], seed=seed)
             print(type(recall_at_k))
             print("Assessment completed!")
@@ -147,9 +149,9 @@ def main():
                     "Replicates": [seeds.index(seed) + 1],
                     "k": k,
                     "Recall_at_k": [v],
-                    "Num_pairs": [num_pairs],
-                    "Class_label_acc":[class_lbl_acc],
-                    "Cell_type_ASW":asw
+                    "num_pairs": [num_pairs],
+                    "cell_type_acc":[class_lbl_acc],
+                    "cell_type_ASW":asw
                 })
 
                 results_rep_df = pd.concat([results_rep_df, new_row], ignore_index=True)
