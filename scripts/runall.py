@@ -119,7 +119,7 @@ def main():
             print(mod2_test.shape)
             
             print("Data splitted!")
-            print("***************")
+            print("****************************")
             print(f"Training has been started!")
             TrainTime0 = time.time()
 
@@ -129,12 +129,15 @@ def main():
             TrainTime1 = time.time()
             print(f"Total training time for model {model_name}: {(TrainTime1 - TrainTime0)/60} minutes.")
             print("Training has been ended!")
+            print("****************************")
+
 
             # Get embeddings
             mod1_emb, mod2_emb = get_emb_func(mod1_test, mod2_test, labels_test, obj_list, save_dir=config["SAVE_DIRS"][model_name], seed=seed, device=device)
             print(f"Shape of RNA embeddings: {mod1_emb.shape}")
             print(f"Shape of ATAC embeddings: {mod2_emb.shape}")
             print(f"Embeddings for model {model_name} were generated!")
+            print("****************************")
 
             # Assessment
             print("Assessment has been started!")
@@ -142,6 +145,7 @@ def main():
                                             save_path=config["SAVE_DIRS"][model_name], seed=seed)
             print(type(recall_at_k))
             print("Assessment completed!")
+            print("****************************")
 
             for k,v in recall_at_k.items():
                 new_row = pd.DataFrame({
@@ -162,6 +166,7 @@ def main():
             EndTime = time.time()
             print(f"Total pipeline runtime for the model {model_name} is: {(EndTime - StartTime)/60} minutes.")
             print(f"Experiment for model {model_name} has been finished!")
+            print("****************************")
 
     experiment = config["EXPERIMENT_NAME"]
     results_df.to_csv(config["SAVE_DIRS"]["EXP"] + f"/results_{experiment}.csv", index=False)
