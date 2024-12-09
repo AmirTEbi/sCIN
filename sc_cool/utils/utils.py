@@ -2,6 +2,7 @@
 
 import numpy as np
 import anndata as ad
+import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA, IncrementalPCA
 import torch
@@ -278,7 +279,7 @@ def get_func_name(model_name):
      elif model_name == "AE":
           return "train_ae", "get_emb_ae"
      
-     elif model_name == "ConAAE":
+     elif model_name == "Con-AAE":
           return "train_con", "get_emb_con"
      
      elif model_name == "Harmony":
@@ -286,6 +287,17 @@ def get_func_name(model_name):
      
      elif model_name == "MOFA":
           return "train_mofa", "get_mofa_emb"
+     
+def get_func_name_unpaired(model_name):
+     
+     if model_name == "scCOOL":
+          return "train_sccool_unpaired", "get_emb_sccool"
+     
+     elif model_name == "AE":
+          return "train_ae_unpaired", "get_emb_ae"
+     
+     elif model_name == "Con-AAE":
+          return "train_con_unpaired", "get_emb_con"
 
 
 def read_config(file_path):
@@ -320,7 +332,7 @@ def make_plots(results_df, save_dir):
 
     # Plot ASW_score by Model and Replication
     plt.figure(figsize=(12, 6))
-    sns.lineplot(data=results_df, x='Replicates', y='Cell_type_ASW', hue='Models', style='Models', 
+    sns.lineplot(data=results_df, x='Replicates', y='cell_type_ASW', hue='Models', style='Models', 
                  markers=True, dashes=False)
     plt.title('Line Plot of ASW score by Model and Replication')
     plt.xlabel('Replicates')
@@ -331,7 +343,7 @@ def make_plots(results_df, save_dir):
 
     # Plot Integration score by Model and Replication
     plt.figure(figsize=(12, 6))
-    sns.lineplot(data=results_df, x='Replicates', y='Class_label_acc', hue='Models', style='Models', 
+    sns.lineplot(data=results_df, x='Replicates', y='cell_type_acc', hue='Models', style='Models', 
                  markers=True, dashes=False)
     plt.title('Line Plot of Cell type accuracy by Model and Replication')
     plt.xlabel('Replicates')
@@ -341,8 +353,8 @@ def make_plots(results_df, save_dir):
     plt.savefig(save_dir + "/model_rep_ct_acc.png")
 
     grouped = results_df.groupby(['Models', 'Replicates']).agg({'Recall_at_k': ['mean', 'std'], 
-                                                                'Cell_type_ASW': ['mean', 'std'], 
-                                                                'Class_label_acc':['mean', 'std']}).reset_index()
+                                                                'cell_type_ASW': ['mean', 'std'], 
+                                                                'cell_type_acc':['mean', 'std']}).reset_index()
     grouped.columns = ['Models', 'Replicates', 'Recall_mean', 'Recall_std', 'ASW_mean', 'ASW_std', 
                        'ct_acc_mean', 'ct_acc__std']
 
@@ -409,3 +421,21 @@ def select_cell_types(adata:ad.AnnData, save_dir:str) -> None:
      print(ct_test.shape)
 
      np.save(save_dir + "/test_cell_types_seed_0.npy", ct_test)
+
+
+def shuffle_per_cell_type(data: np.array, labels:np.array, seed: int) -> np.array:
+     
+     if seed is not None:
+          np.random.seed(seed)
+
+     shuffled_data = np.empty_like(data)
+     
+     df = pd.DataFrame(data)
+     df["labels"] = labels
+
+     for lbl in np.unique(labels):
+          cell_type_indices = df[df["labels"] == lbl].index
+          shuffled_indices = np.random.permutation(cell_type_indices)
+          shuffled_data[cell_type_indices, :] = data[shuffled_indices, :]
+
+     return shuffled_data
