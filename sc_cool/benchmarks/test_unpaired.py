@@ -4,7 +4,7 @@ import scanpy as sc
 from sc_cool.utils.utils import (split_full_data,
                                    split_partial_data,
                                    extract_counts, 
-                                   get_func_name, 
+                                   get_func_name_unpaired, 
                                    read_config, 
                                    load_data, 
                                    compute_KL_loss, 
@@ -20,6 +20,15 @@ from sc_cool.models.sc_cool import (RNAEncoder,
                                       ATACEncoder, 
                                       scCOOL, train_sccool_unpaired, 
                                       get_emb_sccool)
+from sc_cool.models.ConAAE.con_aae import (setup_args, train_con_unpaired, get_emb_con)
+
+from sc_cool.models.AE import (RNAEncoderAE, 
+                               ATACEncoderAE, 
+                               RNADecoder, 
+                               ATACDecoder,
+                               SimpleAutoEncoder, 
+                               train_ae_unpaired, 
+                               get_emb_ae)
 
 from sc_cool.benchmarks.assess import (ct_recall, assess)
 from sklearn.model_selection import train_test_split
@@ -43,7 +52,9 @@ def main():
     parser = argparse.ArgumentParser(description='Get config')
     parser.add_argument('--config_path', type=str, help='config file')
     parser.add_argument('--seed_range', type=int, help='Range of the random seeds', default=100)
+    parser.add_argument("--quick_test", action='store_true', help="Whether to run training for one epoch for debuging")
     args = parser.parse_args()
+
     config = read_config(args.config_path)
 
     # Load data
@@ -53,8 +64,8 @@ def main():
     seeds = list(np.arange(0, args.seed_range, 10))
     print(f"Seeds are: {seeds}")
     
-    results_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "Num_pairs", 
-                                       "Class_label_acc", "Cell_type_ASW"])
+    results_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "num_pairs", 
+                                       "cell_type_acc", "cell_type_ASW"])
 
     # Determine the name of the model to train
     for i, name in enumerate(config["MODEL_NAMES"]):
@@ -63,15 +74,15 @@ def main():
         model_name = name
         settings = config["SETTINGS"][model_name]
 
-        train_func = train_sccool_unpaired
-        get_emb_func = get_emb_sccool
+        train_func_name, get_emb_func_name = get_func_name_unpaired(model_name)
+        train_func = globals().get(train_func_name)
+        get_emb_func = globals().get(get_emb_func_name)
 
         print(f"Experiment for model {model_name} has been started!")
 
 
         #############
-        QUICK_TEST = False
-        if QUICK_TEST:
+        if args.quick_test:
             epochs = 1
         else:
             epochs = settings["EPOCHS"]
@@ -81,8 +92,8 @@ def main():
             print(f"Seed {seed} has been started!")
 
             # To save the results for the current replication
-            results_rep_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "Num_pairs", 
-                                       "Class_label_acc", "Cell_type_ASW"])                
+            results_rep_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "num_pairs", 
+                                                   "cell_type_acc", "cell_type_ASW"])                
 
             # Split data into train and test
             if settings["IS_PARTIAL"] == "True":
@@ -131,9 +142,9 @@ def main():
                     "Replicates": [seeds.index(seed) + 1],
                     "k": k,
                     "Recall_at_k": [v],
-                    "Num_pairs": [num_pairs],
-                    "Class_label_acc":[class_lbl_acc],
-                    "Cell_type_ASW":asw
+                    "num_pairs": [num_pairs],
+                    "cell_type_acc":[class_lbl_acc],
+                    "cell_type_ASW":asw
                 })
 
 
