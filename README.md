@@ -4,4 +4,6 @@
 test unpaired for AE, scCOOL, and Con-AAEE were done.
 Check for bugs, kills, etc tomorrow.
 lab report for this experiment.
-Discuss Dr. Montazeri about other evaluation possibilities.
+Discuss Dr. Montazeri about other evaluation possibilities. --> Done.
+
+Redo ASW analysis for original data and PCA integration.
