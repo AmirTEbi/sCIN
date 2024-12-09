@@ -19,7 +19,8 @@ from sc_cool.utils.utils import (split_full_data,
                                    dis_accuracy,    
                                    train_autoencoders, 
                                    train_classifier, 
-                                   make_plots)
+                                   make_plots,
+                                   shuffle_per_cell_type)
 from sc_cool.models.sc_cool import (RNAEncoder, 
                                       ATACEncoder, 
                                       scCOOL, train_sccool, 
@@ -56,10 +57,12 @@ def main():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Read data path from the config file
-    parser = argparse.ArgumentParser(description='Get config')
-    parser.add_argument('--config_path', type=str, help='config file')
-    parser.add_argument('--seed_range', type=int, help='Range of the random seeds for replication', default=100)
+    parser = argparse.ArgumentParser(description="Experiment options")
+    parser.add_argument("--config_path", type=str, help="config file")
+    parser.add_argument("--seed_range", type=int, help="Range of the random seeds for replications", default=100)
+    parser.add_argument("--quick_test", action='store_true', help="Whether to run training for one epoch for debuging")
     args = parser.parse_args()
+
     config = read_config(args.config_path)
 
     # Load data 
@@ -85,10 +88,10 @@ def main():
         get_emb_func = globals().get(get_emb_func_name)
 
         print(f"Experiment for model {model_name} has been started!")
+        print("###############################")
 
         #############
-        QUICK_TEST = False
-        if QUICK_TEST:
+        if args.quick_test:
             epochs = 1
         else:
             epochs = settings["EPOCHS"]
@@ -119,7 +122,6 @@ def main():
             print(mod2_test.shape)
             
             print("Data splitted!")
-            print("****************************")
             print(f"Training has been started!")
             TrainTime0 = time.time()
 
