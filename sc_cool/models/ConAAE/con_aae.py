@@ -4,9 +4,10 @@ import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.autograd import Variable
-from model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
-from conAAE import conAAE
+from sc_cool.models.ConAAE.model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
+from sc_cool.models.ConAAE.conAAE import conAAE
 from sklearn.decomposition import PCA
+from sc_cool.utils.utils import shuffle_per_cell_type
 import os
 import argparse
 import time
@@ -63,17 +64,17 @@ def setup_args(args=[]):
     return options.parse_args(args)
 
 
-def train_con(rna_train, atac_train, labels_train, epochs,
+def train_con(mod1_train, mod2_train, labels_train, epochs,
               settings=None, device=None):
     
     # PCA transformations as the original paper stated
     print("PCA transformation ...")
-    pca_rna = PCA(n_components=settings["PCs"])
-    pca_atac =PCA(n_components=settings["PCs"])
-    pca_rna.fit(rna_train)
-    pca_atac.fit(atac_train)
-    rna_train = pca_rna.transform(rna_train)
-    atac_train = pca_atac.transform(atac_train)
+    pca_mod1 = PCA(n_components=settings["PCs"])
+    pca_mod2 =PCA(n_components=settings["PCs"])
+    pca_mod1.fit(mod1_train)
+    pca_mod2.fit(mod2_train)
+    mod1_train = pca_mod1.transform(mod1_train)
+    mod2_train = pca_mod2.transform(mod2_train)
     print("PCA finished.")
 
     # Model parameters
@@ -89,13 +90,13 @@ def train_con(rna_train, atac_train, labels_train, epochs,
 
 
     # Arrays to tensors
-    rna_train_t = torch.from_numpy(rna_train).to(torch.float32)
-    atac_train_t = torch.from_numpy(atac_train).to(torch.float32)
+    mod1_train_t = torch.from_numpy(mod1_train).to(torch.float32)
+    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32)
     labels_train_t = torch.from_numpy(labels_train).long()
 
     # Create datasets
-    RNA_train_dataset = torch.utils.data.TensorDataset(rna_train_t, labels_train_t)
-    ATAC_train_dataset = torch.utils.data.TensorDataset(atac_train_t, labels_train_t)
+    RNA_train_dataset = torch.utils.data.TensorDataset(mod1_train_t, labels_train_t)
+    ATAC_train_dataset = torch.utils.data.TensorDataset(mod2_train_t, labels_train_t)
 
     # Create model object
     con=conAAE(RNA_train_dataset,ATAC_train_dataset,args)
@@ -103,31 +104,81 @@ def train_con(rna_train, atac_train, labels_train, epochs,
     # Train the model
     con.train()         
 
-    return [con, pca_rna, pca_atac]
+    return [con, pca_mod1, pca_mod2]
 
 
-def get_emb_con(rna_test, atac_test, labels_test, obj_list, save_dir=None, seed=None, device=None):
+def train_con_unpaired(mod1_train, mod2_train, labels_train, epochs, 
+                       settings=None, device=None, **kwargs):
+     
+    shuffled_mod2_train = shuffle_per_cell_type(data=mod2_train,
+                                                labels=labels_train,
+                                                seed=None)
+    ######### DBUG
+    print(shuffled_mod2_train.shape)
+    #########
+
+    # PCA transformations as the original paper stated
+    print("PCA transformation ...")
+    pca_mod1 = PCA(n_components=settings["PCs"])
+    pca_mod2 =PCA(n_components=settings["PCs"])
+    pca_mod1.fit(mod1_train)
+    pca_mod2.fit(shuffled_mod2_train)
+    mod1_train = pca_mod1.transform(mod1_train)
+    mod2_train = pca_mod2.transform(shuffled_mod2_train)
+    print("PCA finished.")
+
+    # Model parameters
+    args = setup_args(args=['--consistency-loss', '--contrastive-loss', '--triplet-loss', '--VAE', 
+                        '--conditional-adv', '--conditional', '--discriminator', '--MMD-loss', '--anchor-loss', 
+                        '-gpu'])
+    
+    args.max_epochs = epochs
+
+    # Check device
+    if not torch.cuda.is_available():
+            args.use_gpu = False
+
+
+    # Arrays to tensors
+    mod1_train_t = torch.from_numpy(mod1_train).to(torch.float32)
+    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32)
+    labels_train_t = torch.from_numpy(labels_train).long()
+
+    # Create datasets
+    RNA_train_dataset = torch.utils.data.TensorDataset(mod1_train_t, labels_train_t)
+    ATAC_train_dataset = torch.utils.data.TensorDataset(mod2_train_t, labels_train_t)
+
+    # Create model object
+    con=conAAE(RNA_train_dataset,ATAC_train_dataset,args)
+
+    # Train the model
+    con.train()         
+
+    return [con, pca_mod1, pca_mod2]
+
+
+def get_emb_con(mod1_test, mod2_test, labels_test, obj_list, save_dir=None, seed=None, device=None):
      
      model = obj_list[0]
-     pca_rna = obj_list[1]
-     pca_atac = obj_list[2]
+     pca_mod1 = obj_list[1]
+     pca_mod2 = obj_list[2]
 
-     rna_test = pca_rna.transform(rna_test)
-     atac_test = pca_atac.transform(atac_test)
+     mod1_test = pca_mod1.transform(mod1_test)
+     mod2_test = pca_mod2.transform(mod2_test)
      
      # Check if the model is trained
      print(f"Is the model trained: {model.is_trained}")
 
      # Arrays to tensors
-     rna_test_t = torch.from_numpy(rna_test).to(torch.float32)
-     atac_test_t = torch.from_numpy(atac_test).to(torch.float32)
+     mod1_test_t = torch.from_numpy(mod1_test).to(torch.float32)
+     mod2_test_t = torch.from_numpy(mod2_test).to(torch.float32)
      labels_test_t = torch.from_numpy(labels_test).long()
 
      # Create datasets
-     RNA_test_dataset = torch.utils.data.TensorDataset(rna_test_t, labels_test_t)
-     ATAC_test_dataset = torch.utils.data.TensorDataset(atac_test_t, labels_test_t)
+     Mod1_test_dataset = torch.utils.data.TensorDataset(mod1_test_t, labels_test_t)
+     Mod2_test_dataset = torch.utils.data.TensorDataset(mod2_test_t, labels_test_t)
 
      # Get embeddings
-     rna_emb, atac_emb = model.test(RNA_test_dataset,ATAC_test_dataset, seed=seed, save_dir=save_dir)
+     mod1_embs, mod2_embs = model.test(Mod1_test_dataset, Mod2_test_dataset, seed=seed, save_dir=save_dir)
 
-     return rna_emb, atac_emb
+     return mod1_embs, mod2_embs
