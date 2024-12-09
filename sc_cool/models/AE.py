@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.optim import Adam
+from sklearn.decomposition import PCA
 
 
 class RNAEncoderAE(nn.Module):
@@ -223,12 +224,79 @@ def train_ae(rna_train, atac_train, epochs, labels_train=None, settings=None,
     return ae
 
 
-def get_emb_ae(model, rna_test, atac_test):
+def train_ae_unpaired(mod1_train, mod2_train, epochs, labels_train=None, settings=None, 
+                      device=None):
+    
+    hidden_dim = settings["hidden_dim"]
+    latent_dim = settings["latent_dim"]
+    batch_size = settings["batch_size"]
+    lr = settings["lr"]
+    device = device
 
-    with torch.no_grad():
-        _, _, rna_emb, atac_emb = model(rna_test, atac_test)
+    # PCA transformations as the original paper stated
+    print("PCA transformation ...")
+    pca_mod1 = PCA(n_components=settings["PCs"])
+    pca_mod2 =PCA(n_components=settings["PCs"])
+    pca_mod1.fit(mod1_train)
+    pca_mod2.fit(mod2_train)
+    mod1_train = pca_mod1.transform(mod1_train)
+    mod2_train = pca_mod2.transform(mod2_train)
+    print("PCA finished.")
 
-    rna_emb_np = rna_emb.cpu().numpy()
-    atac_emb_np = atac_emb.cpu().numpy()
+    rna_encoder = RNAEncoderAE(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
+    rna_decoder = RNADecoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
+    atac_encoder = ATACEncoderAE(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
+    atac_decoder = ATACDecoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
+    ae = SimpleAutoEncoder(rna_encoder, atac_encoder, rna_decoder, atac_decoder).to(device)
 
-    return rna_emb_np, atac_emb_np
+    rna_ds = TensorDataset(mod1_train)
+    atac_ds = TensorDataset(mod2_train)
+    rna_dl = DataLoader(rna_ds, batch_size, shuffle=False)
+    atac_dl = DataLoader(atac_ds, batch_size, shuffle=False)
+
+    optimizer = Adam(ae.parameters(), lr=lr)
+    mse = nn.MSELoss()
+
+    for epoch in range(epochs):
+
+        ae.train()
+        epoch_loss = 0.0
+        total_samples = 0
+        for rna_batch, atac_batch in zip(rna_dl, atac_dl):
+
+            rna_batch[0] = rna_batch[0].to(device)
+            atac_batch[0] = atac_batch[0].to(device)
+            optimizer.zero_grad()
+            x_rna, x_atac, _, _ = ae(rna_batch[0], atac_batch[0])
+            loss = (mse(x_rna, rna_batch[0]) + mse(x_atac, atac_batch[0])) / 2
+
+            loss.backward()
+            optimizer.step()
+            epoch_loss += loss.item() * len(rna_batch[0])
+            total_samples += len(rna_batch[0])
+
+        epoch_loss /= total_samples
+        print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
+
+    return [ae, pca_mod1, pca_mod2]
+
+    
+
+
+def get_emb_ae(mod1_test, mod2_test, labels_test, obj_list, 
+               save_dir=None, seed=None, device=None):
+    
+     model = obj_list[0]
+     pca_mod1 = obj_list[1]
+     pca_mod2 = obj_list[2]
+
+     mod1_test = pca_mod1.transform(mod1_test)
+     mod2_test = pca_mod2.transform(mod2_test)
+
+     with torch.no_grad():
+         _, _, rna_emb, atac_emb = model(mod1_test, mod2_test)
+ 
+     rna_emb_np = rna_emb.cpu().numpy()
+     atac_emb_np = atac_emb.cpu().numpy()
+
+     return rna_emb_np, atac_emb_np
