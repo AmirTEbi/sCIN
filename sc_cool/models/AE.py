@@ -177,7 +177,7 @@ class SimpleAutoEncoder(nn.Module):
         return x_rna, x_atac, rna_emb, atac_emb
     
 
-def train_ae(rna_train, atac_train, epochs, labels_train=None, settings=None, 
+def train_ae(rna_train, atac_train, labels_train=None, epochs=None, settings=None, 
              device=None):
 
     hidden_dim = settings["hidden_dim"]
@@ -224,7 +224,7 @@ def train_ae(rna_train, atac_train, epochs, labels_train=None, settings=None,
     return ae
 
 
-def train_ae_unpaired(mod1_train, mod2_train, epochs, labels_train=None, settings=None, 
+def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
                       device=None):
     
     hidden_dim = settings["hidden_dim"]
