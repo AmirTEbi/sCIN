@@ -109,10 +109,12 @@ def train_con(mod1_train, mod2_train, labels_train, epochs,
 
 def train_con_unpaired(mod1_train, mod2_train, labels_train, epochs, 
                        settings=None, device=None, **kwargs):
+    
+    seed = kwargs["seed"]
      
     shuffled_mod2_train = shuffle_per_cell_type(data=mod2_train,
                                                 labels=labels_train,
-                                                seed=None)
+                                                seed=seed)
     ######### DBUG
     print(shuffled_mod2_train.shape)
     #########
