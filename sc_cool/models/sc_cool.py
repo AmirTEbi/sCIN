@@ -279,8 +279,6 @@ def train_sccool_unpaired(rna_train, atac_train, labels_train, epochs, settings,
     cool.to(device)
     optimizer = Adam(cool.parameters(), lr=lr)
 
-    rng = np.random.default_rng(seed=seed)  # For randomness in cell selection within a cell type
-
     # Training loop
     for epoch in range(epochs):
 
@@ -290,11 +288,14 @@ def train_sccool_unpaired(rna_train, atac_train, labels_train, epochs, settings,
 
         # Select one cell per cell type in order
         for i in range(0, len(label_indices[0]), bob):
+            idx = []
+            for j in range(i, i+bob):
+                for k in label_indices:
+                    idx.append(k[j])
 
-            idx_rna, idx_atac = select_unpaired_cells_by_type(label_indices, bob, rng)
-
-            rna_l = [rna_train_t[l, :] for l in idx_rna]
-            atac_l = [atac_train_t[m, :] for m in idx_atac]
+            # Create mini-batch
+            rna_l = [rna_train_t[l, :] for l in idx]
+            atac_l = [atac_train_t[m, :] for m in idx]
             rna_batch = torch.vstack(rna_l)
             atac_batch = torch.vstack(atac_l)
 
@@ -305,7 +306,6 @@ def train_sccool_unpaired(rna_train, atac_train, labels_train, epochs, settings,
             # sum losses for all blocks 
             batch_logits = []
             block_tensor_shape = (num_classes, num_classes)
-
             for l in range(bob):
                 start_row = l * block_tensor_shape[0]
                 end_row = start_row + block_tensor_shape[0]
@@ -314,7 +314,7 @@ def train_sccool_unpaired(rna_train, atac_train, labels_train, epochs, settings,
                 sub_logits = logits[start_row:end_row, start_col:end_col]
                 batch_logits.append(sub_logits)
                 losses = [F.cross_entropy(logit, target) + F.cross_entropy(logit.T, target) \
-                            for logit in batch_logits]
+                          for logit in batch_logits]
                 batch_loss = sum(losses)
 
             # Update model parameters
