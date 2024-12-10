@@ -3,6 +3,7 @@ import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.optim import Adam
 from sklearn.decomposition import PCA
+from sc_cool.utils.utils import shuffle_per_cell_type
 
 
 class RNAEncoderAE(nn.Module):
@@ -177,8 +178,8 @@ class SimpleAutoEncoder(nn.Module):
         return x_rna, x_atac, rna_emb, atac_emb
     
 
-def train_ae(rna_train, atac_train, labels_train=None, epochs=None, settings=None, 
-             device=None):
+def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
+             device=None, **kwargs):
 
     hidden_dim = settings["hidden_dim"]
     latent_dim = settings["latent_dim"]
@@ -186,14 +187,19 @@ def train_ae(rna_train, atac_train, labels_train=None, epochs=None, settings=Non
     lr = settings["lr"]
     device = device
 
-    rna_encoder = RNAEncoderAE(rna_train.shape[1], hidden_dim, latent_dim).to(device)
-    rna_decoder = RNADecoder(latent_dim, hidden_dim, rna_train.shape[1]).to(device)
-    atac_encoder = ATACEncoderAE(atac_train.shape[1], hidden_dim, latent_dim).to(device)
-    atac_decoder = ATACDecoder(latent_dim, hidden_dim, atac_train.shape[1]).to(device)
+    rna_encoder = RNAEncoderAE(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
+    rna_decoder = RNADecoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
+    atac_encoder = ATACEncoderAE(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
+    atac_decoder = ATACDecoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
     ae = SimpleAutoEncoder(rna_encoder, atac_encoder, rna_decoder, atac_decoder).to(device)
 
-    rna_ds = TensorDataset(rna_train)
-    atac_ds = TensorDataset(atac_train)
+    mod1_train_t = torch.from_numpy(mod1_train).to(torch.float32).to(device)
+    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32).to(device)
+    
+    
+    
+    rna_ds = TensorDataset(mod1_train_t)
+    atac_ds = TensorDataset(mod2_train_t)
     rna_dl = DataLoader(rna_ds, batch_size, shuffle=False)
     atac_dl = DataLoader(atac_ds, batch_size, shuffle=False)
 
@@ -225,15 +231,23 @@ def train_ae(rna_train, atac_train, labels_train=None, epochs=None, settings=Non
 
 
 def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
-                      device=None):
+                      device=None, **kwargs):
     
     hidden_dim = settings["hidden_dim"]
     latent_dim = settings["latent_dim"]
     batch_size = settings["batch_size"]
     lr = settings["lr"]
     device = device
+    seed = kwargs["seed"]
 
-    # PCA transformations as the original paper stated
+    shuffled_mod2_train = shuffle_per_cell_type(data=mod2_train,
+                                                labels=labels_train,
+                                                seed=seed)
+    ######### DBUG
+    print(shuffled_mod2_train.shape)
+    #########
+
+
     print("PCA transformation ...")
     pca_mod1 = PCA(n_components=settings["PCs"])
     pca_mod2 =PCA(n_components=settings["PCs"])
@@ -243,14 +257,23 @@ def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, se
     mod2_train = pca_mod2.transform(mod2_train)
     print("PCA finished.")
 
+
+    # Arrays to tensors
+    mod1_train_t = torch.from_numpy(mod1_train)
+    mod1_train_t = mod1_train_t.to(torch.float32)
+    mod1_train_t = mod1_train_t.to(device)
+    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32)
+    mod2_train_t = mod2_train_t.to(torch.float32)
+    mod2_train_t = mod2_train_t.to(device)
+
     rna_encoder = RNAEncoderAE(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
     rna_decoder = RNADecoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
     atac_encoder = ATACEncoderAE(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
     atac_decoder = ATACDecoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
     ae = SimpleAutoEncoder(rna_encoder, atac_encoder, rna_decoder, atac_decoder).to(device)
 
-    rna_ds = TensorDataset(mod1_train)
-    atac_ds = TensorDataset(mod2_train)
+    rna_ds = TensorDataset(mod1_train_t)
+    atac_ds = TensorDataset(mod2_train_t)
     rna_dl = DataLoader(rna_ds, batch_size, shuffle=False)
     atac_dl = DataLoader(atac_ds, batch_size, shuffle=False)
 
@@ -283,7 +306,7 @@ def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, se
     
 
 
-def get_emb_ae(mod1_test, mod2_test, labels_test, obj_list, 
+def get_emb_ae(mod1_test, mod2_test, labels_test=None, obj_list=None, 
                save_dir=None, seed=None, device=None):
     
      model = obj_list[0]
@@ -293,8 +316,16 @@ def get_emb_ae(mod1_test, mod2_test, labels_test, obj_list,
      mod1_test = pca_mod1.transform(mod1_test)
      mod2_test = pca_mod2.transform(mod2_test)
 
+     # Arrays to tensors
+     mod1_test_t = torch.from_numpy(mod1_test)
+     mod1_test_t = mod1_test_t.to(torch.float32)
+     mod1_test_t = mod1_test_t.to(device)
+     mod2_test_t = torch.from_numpy(mod2_test).to(torch.float32)
+     mod2_test_t = mod2_test_t.to(torch.float32)
+     mod2_test_t = mod2_test_t.to(device)
+
      with torch.no_grad():
-         _, _, rna_emb, atac_emb = model(mod1_test, mod2_test)
+         _, _, rna_emb, atac_emb = model(mod1_test_t, mod2_test_t)
  
      rna_emb_np = rna_emb.cpu().numpy()
      atac_emb_np = atac_emb.cpu().numpy()
