@@ -8,6 +8,9 @@ Tutorial:
 # Plot a specific metric based on a pre-existing evaluation file 
 sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." model_name "all" --metric "ASW" --metric_path "..." --plot
 
+# Plot Recall@k, Cell type accuracy, and ASW metrics based on a pre-existing evaluation file
+sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." model_name "all" --metric "ASW" --metric_path "..." --plot_all
+
 # Compute all integration metrics based on pre-existing embeddings
 sc-cool > python -m sc_cool.benchmarks.benchmarks --input_emb_dir "..." --save_dir "..." --model_name "scCOOL" --compute 
 
@@ -37,6 +40,7 @@ def main():
     parser.add_argument('--compute', action='store_true', help='Compute metrics')
     parser.add_argument('--reverse', action='store_true', help='Compute metrics in reverse setting')
     parser.add_argument('--plot', action='store_true', help='Plot the specified metric')
+    parser.add_argument('--plot_all', action='store_true', help='Plot recall_at_k, cell_type_acc, ASW metrics')
     args = parser.parse_args()
 
     # Compute metrics if needed
@@ -102,6 +106,11 @@ def main():
             plot_cell_type_accuracy(data, save_dir=args.save_dir, model_name=args.model_name)
         elif args.metric == "ASW":
             plot_asw(data, save_dir=args.save_dir, model_name=args.model_name)
+
+    elif args.plot_all:
+        plot_recall_at_k(data, save_dir=args.save_dir, model_name=args.model_name)
+        plot_cell_type_accuracy(data, save_dir=args.save_dir, model_name=args.model_name)
+        plot_asw(data, save_dir=args.save_dir, model_name=args.model_name)
 
     print("Finished.")
 
