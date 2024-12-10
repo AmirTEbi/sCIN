@@ -153,7 +153,7 @@ def assess(rna_emb, atac_emb, labels_test, n_pc=10,
     plt.savefig(save_path + "/rep" + str(seed) + ".png")
 
     # Compute metrics
-    recall_at_k, num_pairs, class_lbl_acc = ct_recall_v1(atac_emb, rna_emb, labels_test)
+    recall_at_k, num_pairs, class_lbl_acc = compute_metrics(atac_emb, rna_emb, labels_test)
 
     # Compute ASW
     asw = (silhouette_score(joint_emb, labels_test) + 1) / 2
