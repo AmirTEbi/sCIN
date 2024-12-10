@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 from sklearn.decomposition import PCA
-from sc_cool.utils.utils import impute_cells, select_unpaired_cells_by_type
+from sc_cool.utils.utils import impute_cells, shuffle_per_cell_type
 
 
 class RNAEncoder(nn.Module):
@@ -229,8 +229,15 @@ def train_sccool_unpaired(rna_train, atac_train, labels_train, epochs, settings,
     latent_dim = settings["latent_dim"]
     device = device
     bob = settings["bob"]
-
     seed = kwargs["seed"]
+
+
+    shuffled_atac_train = shuffle_per_cell_type(data=atac_train,
+                                                labels=labels_train,
+                                                seed=seed)
+    ######### DBUG
+    print(shuffled_atac_train.shape)
+    #########
 
     # PCA transformations
     print("PCA transformation ...")
