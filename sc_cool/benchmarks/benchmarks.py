@@ -9,7 +9,7 @@ Tutorial:
 sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." model_name "all" --metric "ASW" --metric_path "..." --plot
 
 # Plot Recall@k, Cell type accuracy, and ASW metrics based on a pre-existing evaluation file
-sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." model_name "all" --metric "ASW" --metric_path "..." --plot_all
+sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." model_name "all" --metric_path "..." --plot_all
 
 # Compute all integration metrics based on pre-existing embeddings
 sc-cool > python -m sc_cool.benchmarks.benchmarks --input_emb_dir "..." --save_dir "..." --model_name "scCOOL" --compute 
@@ -108,6 +108,9 @@ def main():
             plot_asw(data, save_dir=args.save_dir, model_name=args.model_name)
 
     elif args.plot_all:
+        
+        data = pd.read_csv(args.metric_path)
+        print(data.head())
         plot_recall_at_k(data, save_dir=args.save_dir, model_name=args.model_name)
         plot_cell_type_accuracy(data, save_dir=args.save_dir, model_name=args.model_name)
         plot_asw(data, save_dir=args.save_dir, model_name=args.model_name)
