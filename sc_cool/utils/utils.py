@@ -423,7 +423,26 @@ def select_cell_types(adata:ad.AnnData, save_dir:str) -> None:
      np.save(save_dir + "/test_cell_types_seed_0.npy", ct_test)
 
 
-def shuffle_per_cell_type(data: np.array, labels:np.array, seed: int) -> np.array:
+def shuffle_per_cell_type(data: np.array, labels: np.array, seed: int) -> np.array:
+     """
+     Shuffle cells within each cell type category.
+
+     Parameters
+     ----------
+     data: np.array
+        Input **training** dataset.
+
+     labels: np.array
+        Cell type labels for each cell.
+
+     seed: int
+        Random seed for reproducibility.
+
+    Return
+    ----------
+    shuffled_data: np.array
+    
+     """
      
      if seed is not None:
           np.random.seed(seed)
