@@ -30,12 +30,13 @@ def plot_recall_at_k(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
 
     model_colors = {
         "Ours": "#e41a1c",  
-        "Con-AAE": "#377eb8", 
-        "Harmony": "#4daf4a",  
-        "MOFA": "#984ea3",  
+        "Con-AAE": "#377eb8",   
         "AE": "#ff7f00", 
     }
 
+    """   "Harmony": "#4daf4a",  
+        "MOFA": "#984ea3",
+ """
 
     grouped_data = data.groupby(['Models', 'k'])['Recall_at_k'].agg(['mean', 'std']).reset_index()
 
@@ -110,7 +111,7 @@ def plot_cell_type_accuracy(data:pd.DataFrame, save_dir:str, model_name:str) -> 
     plt.figure(figsize=(4, 4))
     ax = plt.gca()
 
-    ax = sns.boxplot(x="Models", y="Class_label_acc", data=data, palette=colors)
+    ax = sns.boxplot(x="Models", y="cell_type_acc", data=data, palette=colors)
 
     #plt.title("Models' Performances in Cell Type Accuracy", fontsize=16)
     plt.xlabel("")
@@ -220,7 +221,7 @@ def plot_asw(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     plt.figure(figsize=(4, 4))
     ax = plt.gca()
 
-    ax = sns.boxplot(x="Models", y="Cell_type_ASW", data=data, palette=colors)
+    ax = sns.boxplot(x="Models", y="cell_type_ASW", data=data, palette=colors)
 
     #plt.title("Models' Performances in Cell Type Clustering", fontsize=16)
     plt.xlabel("")
