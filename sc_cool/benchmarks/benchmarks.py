@@ -6,7 +6,7 @@ Tutorial:
 > cd sc-cool
 
 # Plot a specific metric based on a pre-existing evaluation file 
-sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." model_name "all" --metric "ASW" --metric_path "..." --plot
+sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." --model_name "all" --metric "ASW" --metric_path "..." --plot
 
 # Plot Recall@k, Cell type accuracy, and ASW metrics based on a pre-existing evaluation file
 sc-cool > python -m sc_cool.benchmarks.benchmarks --save_dir "..." --model_name "all" --metric_path "..." --plot_all
