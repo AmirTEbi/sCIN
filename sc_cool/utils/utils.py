@@ -458,3 +458,10 @@ def shuffle_per_cell_type(data: np.array, labels: np.array, seed: int) -> np.arr
           shuffled_data[cell_type_indices, :] = data[shuffled_indices, :]
 
      return shuffled_data
+
+
+def random_shuffle(data: np.array, seed: int) -> np.array:
+     
+     np.random.seed(seed)
+
+     return data[np.random.permutation(data.shape[0])]
