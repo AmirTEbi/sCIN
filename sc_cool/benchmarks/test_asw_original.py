@@ -119,7 +119,7 @@ def main():
     print(f"Results saved to: {output_file}")       
 
     # Plot
-    data_lbls = tuple(args.data)
+    data_lbls = ["SHARE", "PBMC", "CITE"]
     mod_lbls = {
         "Modality 1": tuple(res_df["Mod1_ASW"].values),
         "Modality 2": tuple(res_df["Mod2_ASW"].values),
@@ -127,29 +127,40 @@ def main():
         "Our integration": tuple(res_df["Our_ASW"].values)
     }
 
-    x = np.arange(len(data_lbls))
-    width = 0.25
+    group_spacing = 1.75  
+    bar_spacing = 0.05   
+    x = np.arange(len(data_lbls)) * (1 + group_spacing)
+    width = 0.5  
     multiplier = 0
 
     fig, ax = plt.subplots(layout='constrained')
     colors = sns.color_palette("colorblind", len(mod_lbls))
+
     for (attribute, measurement), color in zip(mod_lbls.items(), colors):
-         offset = width * multiplier
-         rects = ax.bar(x + offset, measurement, width, label=attribute, color=color)
-         ax.bar_label(rects, padding=3)
-         multiplier += 1
+        offset = width * multiplier + bar_spacing * multiplier
+        rects = ax.bar(x + offset, measurement, width, label=attribute, color=color)
+        
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(
+                rect.get_x() + rect.get_width() / 2,  
+                height + 0.02,  
+                f'{height:.2f}',  
+                ha='center', va='bottom', fontsize=8  
+            )
+        multiplier += 1
 
     max_asw = max(max(res_df["Mod1_ASW"]), max(res_df["Mod2_ASW"]),
-              max(res_df["PCA_ASW"]), max(res_df["Our_ASW"]))
-    ax.set_ylim(0, max_asw + 0.1 * max_asw)
-
+                max(res_df["PCA_ASW"]), max(res_df["Our_ASW"]))
+    ax.set_ylim(0, max_asw + 0.2 * max_asw) 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-
     ax.set_ylabel('ASW')
-    ax.set_xticks(x + width * (len(mod_lbls) - 1) / 2)
+    ax.set_xticks(x + (width * (len(mod_lbls) - 1)) / 2 + (bar_spacing * multiplier) / 2)
     ax.set_xticklabels(data_lbls)
-    ax.legend(loc='upper left', ncols=3)
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.show()
+
 
     out_plot = os.path.join(args.save_dir, "Ours_PCA_Mod1_Mod2_ASW.png")
     plt.savefig(out_plot)
