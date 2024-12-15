@@ -5,11 +5,9 @@
 - MedR for PBMC and plots --> Done
 - MedR for unpaired CITE --> Still running
 - Lab report for unpaired test --> Done
-- test ASW original --> Still running --> Grouped bar plots
+- test ASW original --> Still running --> Grouped bar plots --> Dones
 
 To Dos:
-- Shuffle all data regardless of cell types to see the robustness of test unpaired.
-- Plots of unpaired CITE MedR
+- Shuffle all data regardless of cell types to see the robustness of test unpaired --> For PBMC
 - Run MedR for unpaired SHARE
-- Check results for test ASW original
 - Extreme unapired setting + OT 
