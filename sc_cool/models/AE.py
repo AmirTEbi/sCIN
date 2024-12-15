@@ -6,10 +6,10 @@ from sklearn.decomposition import PCA
 from sc_cool.utils.utils import shuffle_per_cell_type
 
 
-class RNAEncoderAE(nn.Module):
+class Mod1Encoder(nn.Module):
     """ An encoder with three layers"""
     def __init__(self, in_dim, hidden_dim, latent_dim):
-        super(RNAEncoderAE, self).__init__()
+        super(Mod1Encoder, self).__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
         self.latent_dim = latent_dim
@@ -37,15 +37,15 @@ class RNAEncoderAE(nn.Module):
         h = self.linear1(x)
         h1 = self.bn(h)
         h2 = self.relu(h1)
-        z_rna = self.linear2(h2)
+        z_mod1 = self.linear2(h2)
 
-        return z_rna
+        return z_mod1
     
 
-class ATACEncoderAE(nn.Module):
+class Mod2Encoder(nn.Module):
     """ An encoder with three layers"""
     def __init__(self, in_dim, hidden_dim, latent_dim):
-        super(ATACEncoderAE, self).__init__()
+        super(Mod2Encoder, self).__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
         self.latent_dim = latent_dim
@@ -72,14 +72,14 @@ class ATACEncoderAE(nn.Module):
         h = self.linear1(x)
         h1 = self.bn(h)  # BatchNorm added before relu as Deep Learning (Bishop, 2023) suggests
         h2 = self.relu(h1)
-        z_atac = self.linear2(h2)
+        z_mod2 = self.linear2(h2)
 
-        return z_atac
+        return z_mod2
 
-class RNADecoder(nn.Module):
+class Mod1Decoder(nn.Module):
     """ A decoder with three layers"""
     def __init__(self, latent_dim, hidden_dim, out_dim):
-        super(RNADecoder, self).__init__()
+        super(Mod1Decoder, self).__init__()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.out_dim = out_dim
@@ -105,15 +105,15 @@ class RNADecoder(nn.Module):
         h1 = self.linear1(z_joint)
         h1 = self.bn(h1)
         h2 = self.relu(h1)
-        x_rna = self.linear2(h2)
+        x_mod1 = self.linear2(h2)
 
-        return x_rna
+        return x_mod1
     
 
-class ATACDecoder(nn.Module):
+class Mod2Decoder(nn.Module):
     """ """
     def __init__(self, latent_dim, hidden_dim, out_dim):
-        super(ATACDecoder, self).__init__()
+        super(Mod2Decoder, self).__init__()
         self.latent_dim = latent_dim
         self.hidden_dim = hidden_dim
         self.out_dim = out_dim
@@ -139,23 +139,23 @@ class ATACDecoder(nn.Module):
         h1 = self.linear1(z_joint)
         h1 = self.bn(h1)
         h2 = self.relu(h1)
-        x_atac = self.linear2(h2)
+        x_mod2 = self.linear2(h2)
 
-        return x_atac
+        return x_mod2
     
 
 class SimpleAutoEncoder(nn.Module):
     """ """
-    def __init__(self, rna_encoder, atac_encoder,
-                 rna_decoder, atac_decoder):  # in_dim == out_dim
+    def __init__(self, mod1_encoder, mod2_encoder,
+                 mod1_decoder, mod2_decoder):  # in_dim == out_dim
         super(SimpleAutoEncoder, self).__init__()
 
-        self.rna_encoder = rna_encoder
-        self.atac_encoder = atac_encoder
-        self.rna_decoder = rna_decoder
-        self.atac_decoder = atac_decoder
+        self.mod1_encoder = mod1_encoder
+        self.mod1_encoder = mod2_encoder
+        self.mod1_decoder = mod1_decoder
+        self.mod2_decoder = mod2_decoder
 
-    def forward(self, rna, atac):
+    def forward(self, mod1, mod2):
         """
 
         Parameters
@@ -169,13 +169,13 @@ class SimpleAutoEncoder(nn.Module):
         -------
 
         """
-        rna_emb = self.rna_encoder(rna)
-        atac_emb = self.atac_encoder(atac)
-        z_joint = torch.cat((rna_emb, atac_emb), 1)
-        x_rna = self.rna_decoder(z_joint)
-        x_atac = self.atac_decoder(z_joint)
+        mod1_emb = self.mod1_encoder(mod1)
+        mod2_emb = self.mod1_encoder(mod2)
+        z_joint = torch.cat((mod1_emb, mod2_emb), 1)
+        mod1_recon = self.mod1_decoder(z_joint)
+        mod2_recon = self.mod2_decoder(z_joint)
 
-        return x_rna, x_atac, rna_emb, atac_emb
+        return mod1_recon, mod2_recon, mod1_emb, mod2_emb
     
 
 def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
@@ -187,21 +187,21 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
     lr = settings["lr"]
     device = device
 
-    rna_encoder = RNAEncoderAE(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
-    rna_decoder = RNADecoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
-    atac_encoder = ATACEncoderAE(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
-    atac_decoder = ATACDecoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
-    ae = SimpleAutoEncoder(rna_encoder, atac_encoder, rna_decoder, atac_decoder).to(device)
+    mod1_encoder = Mod1Encoder(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
+    mod1_decoder = Mod1Decoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
+    mod2_encoder = Mod2Encoder(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
+    mod2_decoder = Mod2Decoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
+    ae = SimpleAutoEncoder(mod1_encoder, mod2_encoder, mod1_decoder, mod2_decoder).to(device)
 
     mod1_train_t = torch.from_numpy(mod1_train).to(torch.float32).to(device)
     mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32).to(device)
     
     
     
-    rna_ds = TensorDataset(mod1_train_t)
-    atac_ds = TensorDataset(mod2_train_t)
-    rna_dl = DataLoader(rna_ds, batch_size, shuffle=False)
-    atac_dl = DataLoader(atac_ds, batch_size, shuffle=False)
+    mod1_ds = TensorDataset(mod1_train_t)
+    mod2_ds = TensorDataset(mod2_train_t)
+    mod1_dl = DataLoader(mod1_ds, batch_size, shuffle=False)
+    mod2_dl = DataLoader(mod2_ds, batch_size, shuffle=False)
 
     optimizer = Adam(ae.parameters(), lr=lr)
     mse = nn.MSELoss()
@@ -211,18 +211,18 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
         ae.train()
         epoch_loss = 0.0
         total_samples = 0
-        for rna_batch, atac_batch in zip(rna_dl, atac_dl):
+        for mod1_batch, mod2_batch in zip(mod1_dl, mod2_dl):
 
-            rna_batch[0] = rna_batch[0].to(device)
-            atac_batch[0] = atac_batch[0].to(device)
+            mod1_batch[0] = mod1_batch[0].to(device)
+            mod2_batch[0] = mod2_batch[0].to(device)
             optimizer.zero_grad()
-            x_rna, x_atac, _, _ = ae(rna_batch[0], atac_batch[0])
-            loss = (mse(x_rna, rna_batch[0]) + mse(x_atac, atac_batch[0])) / 2
+            mod1_recon, mod2_recon, _, _ = ae(mod1_batch[0], mod2_batch[0])
+            loss = (mse(mod1_recon, mod1_batch[0]) + mse(mod2_recon, mod2_batch[0])) / 2
 
             loss.backward()
             optimizer.step()
-            epoch_loss += loss.item() * len(rna_batch[0])
-            total_samples += len(rna_batch[0])
+            epoch_loss += loss.item() * len(mod1_batch[0])
+            total_samples += len(mod1_batch[0])
 
         epoch_loss /= total_samples
         print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
@@ -266,16 +266,16 @@ def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, se
     mod2_train_t = mod2_train_t.to(torch.float32)
     mod2_train_t = mod2_train_t.to(device)
 
-    rna_encoder = RNAEncoderAE(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
-    rna_decoder = RNADecoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
-    atac_encoder = ATACEncoderAE(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
-    atac_decoder = ATACDecoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
-    ae = SimpleAutoEncoder(rna_encoder, atac_encoder, rna_decoder, atac_decoder).to(device)
+    mod1_encoder = Mod1Encoder(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
+    mod1_decoder = Mod1Decoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
+    mod2_encoder = Mod2Encoder(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
+    mod2_decoder = Mod2Decoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
+    ae = SimpleAutoEncoder(mod1_encoder, mod2_encoder, mod1_decoder, mod2_decoder).to(device)
 
-    rna_ds = TensorDataset(mod1_train_t)
-    atac_ds = TensorDataset(mod2_train_t)
-    rna_dl = DataLoader(rna_ds, batch_size, shuffle=False)
-    atac_dl = DataLoader(atac_ds, batch_size, shuffle=False)
+    mod1_ds = TensorDataset(mod1_train_t)
+    mod2_ds = TensorDataset(mod2_train_t)
+    mod1_dl = DataLoader(mod1_ds, batch_size, shuffle=False)
+    mod2_dl = DataLoader(mod2_ds, batch_size, shuffle=False)
 
     optimizer = Adam(ae.parameters(), lr=lr)
     mse = nn.MSELoss()
@@ -285,18 +285,18 @@ def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, se
         ae.train()
         epoch_loss = 0.0
         total_samples = 0
-        for rna_batch, atac_batch in zip(rna_dl, atac_dl):
+        for mod1_batch, mod2_batch in zip(mod1_dl, mod2_dl):
 
-            rna_batch[0] = rna_batch[0].to(device)
-            atac_batch[0] = atac_batch[0].to(device)
+            mod1_batch[0] = mod1_batch[0].to(device)
+            mod2_batch[0] = mod2_batch[0].to(device)
             optimizer.zero_grad()
-            x_rna, x_atac, _, _ = ae(rna_batch[0], atac_batch[0])
-            loss = (mse(x_rna, rna_batch[0]) + mse(x_atac, atac_batch[0])) / 2
+            mod1_recon, mod2_recon, _, _ = ae(mod1_batch[0], mod2_batch[0])
+            loss = (mse(mod1_recon, mod1_batch[0]) + mse(mod2_recon, mod2_batch[0])) / 2
 
             loss.backward()
             optimizer.step()
-            epoch_loss += loss.item() * len(rna_batch[0])
-            total_samples += len(rna_batch[0])
+            epoch_loss += loss.item() * len(mod1_batch[0])
+            total_samples += len(mod1_batch[0])
 
         epoch_loss /= total_samples
         print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
@@ -304,8 +304,6 @@ def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, se
     return [ae, pca_mod1, pca_mod2]
 
     
-
-
 def get_emb_ae(mod1_test, mod2_test, labels_test=None, obj_list=None, 
                save_dir=None, seed=None, device=None):
     
@@ -325,9 +323,9 @@ def get_emb_ae(mod1_test, mod2_test, labels_test=None, obj_list=None,
      mod2_test_t = mod2_test_t.to(device)
 
      with torch.no_grad():
-         _, _, rna_emb, atac_emb = model(mod1_test_t, mod2_test_t)
+         _, _, mod1_emb, mod2_emb = model(mod1_test_t, mod2_test_t)
  
-     rna_emb_np = rna_emb.cpu().numpy()
-     atac_emb_np = atac_emb.cpu().numpy()
+     mod1_emb_np = mod1_emb.cpu().numpy()
+     mod2_emb_np = mod2_emb.cpu().numpy()
 
-     return rna_emb_np, atac_emb_np
+     return mod1_emb_np, mod2_emb_np
