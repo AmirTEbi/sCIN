@@ -22,10 +22,10 @@ from sc_cool.models.sc_cool import (RNAEncoder,
                                       get_emb_sccool)
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con_unpaired, get_emb_con)
 
-from sc_cool.models.AE import (RNAEncoderAE, 
-                               ATACEncoderAE, 
-                               RNADecoder, 
-                               ATACDecoder,
+from sc_cool.models.AE import (Mod1Encoder, 
+                               Mod2Encoder, 
+                               Mod1Decoder, 
+                               Mod2Decoder,
                                SimpleAutoEncoder, 
                                train_ae_unpaired, 
                                get_emb_ae)
