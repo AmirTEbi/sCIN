@@ -465,3 +465,90 @@ def random_shuffle(data: np.array, seed: int) -> np.array:
      np.random.seed(seed)
 
      return data[np.random.permutation(data.shape[0])]
+
+
+def remove_rows(data: np.array, rm_frac: float
+                , seed: int) -> np.array:
+     """
+     Remove random rows from a 2-D numpy array.
+
+     Parameters
+     ----------
+     data: np.array
+
+     rm_frac: float
+     Fraction of rows to randomly remove from the second modality 
+        (default: 0.1)
+
+     seed: int
+        Random seed for reproducibility.
+
+     Return
+     ----------
+     np.array
+     """
+     np.random.seed(seed)
+     num_to_remove = int(len(data) * rm_frac)
+     indices_to_keep = np.random.choice(len(data),
+                                        len(data) - num_to_remove,
+                                        replace=False)
+     return data[indices_to_keep]
+
+
+def make_extreme_unpaired(data1: np.array, 
+                          data2:np.array,
+                          cell_types:np.array,
+                          seed:int,
+                          rm_frac: float = 0.1) -> Tuple[np.array, np.array]:
+     """
+     In each modality, shuffle cells per cell type and select half
+     of them for one modality and another half for the other modality.
+
+     Parameters
+     ----------
+     data1: np.array
+        First modality's count matrix.
+
+     data2: np.array
+        Second modality's count matrix.
+
+     cell_types: np.array
+        Encoded cell types.
+    
+     seed: int
+        Random seed for reproducibility.
+
+     rm_frac: float
+        Fraction of rows to randomly remove from the second modality 
+        (default: 0.1)
+    
+     Return
+     ----------
+     data1_unpaired, data2_unpaired: Tuple
+        unpaired datasets for both modalities.
+     """
+     data1_unpaired_l = []
+     data2_unpaired_l = []
+
+     for ct in np.unique(cell_types):
+          indices = np.where(cell_types == ct)[0]
+
+          np.random.seed(seed)  
+          np.random.shuffle(indices)
+
+          midpoint = len(indices) // 2
+          data1_indices = indices[:midpoint]
+          data2_indices = indices[midpoint:]
+
+          data1_unpaired_l.append(data1[data1_indices])
+          data2_unpaired_l.append(data2[data2_indices])
+
+     data1_unpaired = np.vstack(data1_unpaired_l)
+     data2_unpaired = np.vstack(data2_unpaired_l)
+
+     if rm_frac > 0:
+          data2_unpaired_ = remove_rows(data2_unpaired, 
+                                        rm_frac,
+                                        seed=seed)   
+
+     return data1_unpaired, data2_unpaired_
