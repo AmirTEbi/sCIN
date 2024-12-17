@@ -3,7 +3,7 @@ import pandas as pd
 import scanpy as sc
 from sc_cool.utils.utils import (split_full_data,
                                    extract_counts, 
-                                   get_func_name_unpaired, 
+                                   get_func_name, 
                                    read_config, 
                                    load_data, 
                                    compute_KL_loss, 
@@ -73,7 +73,7 @@ def main():
         model_name = name
         settings = config["SETTINGS"][model_name]
 
-        train_func_name, get_emb_func_name = get_func_name_unpaired(model_name)
+        train_func_name, get_emb_func_name = get_func_name(model_name)
         train_func = globals().get(train_func_name)
         get_emb_func = globals().get(get_emb_func_name)
 
