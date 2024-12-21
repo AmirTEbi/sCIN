@@ -21,8 +21,8 @@ from sc_cool.utils.utils import (split_full_data,
                                    train_classifier, 
                                    make_plots,
                                    shuffle_per_cell_type)
-from sc_cool.models.sc_cool import (RNAEncoder, 
-                                      ATACEncoder, 
+from sc_cool.models.sc_cool import (Mod1Encoder, 
+                                      Mod2Encoder, 
                                       scCOOL, train_sccool, 
                                       get_emb_sccool)
 from sc_cool.models.AE import (Mod1Encoder, 

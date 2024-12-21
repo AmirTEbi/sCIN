@@ -16,8 +16,8 @@ from sc_cool.utils.utils import (split_full_data,
                                    make_plots,
                                    select_unpaired_cells_by_type)
 
-from sc_cool.models.sc_cool import (RNAEncoder, 
-                                      ATACEncoder, 
+from sc_cool.models.sc_cool import (Mod1Encoder, 
+                                      Mod2Encoder, 
                                       scCOOL, train_sccool_unpaired, 
                                       get_emb_sccool)
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con_unpaired, get_emb_con)

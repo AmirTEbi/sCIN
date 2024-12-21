@@ -15,8 +15,8 @@ from sc_cool.utils.utils import (split_full_data,
                                    make_plots,
                                    random_shuffle)
 
-from sc_cool.models.sc_cool import (RNAEncoder, 
-                                      ATACEncoder, 
+from sc_cool.models.sc_cool import (Mod1Encoder, 
+                                      Mod2Encoder, 
                                       scCOOL, train_sccool, 
                                       get_emb_sccool)
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)

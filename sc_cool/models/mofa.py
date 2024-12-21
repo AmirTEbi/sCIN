@@ -37,9 +37,9 @@ def extract_embs(z: np.array, train_cells: int, test_cells: int) -> Union[np.arr
 
 
 def train_mofa(rna_train, atac_train, labels_train=None, epochs=None,
-                settings=None, device=None):
+                settings=None):
     
-    print("This function does nothing except returning essential params for get_mofa_emb.")
+    """This function does nothing except returning essential params for get_mofa_emb."""
 
     return [rna_train, atac_train, settings]
     

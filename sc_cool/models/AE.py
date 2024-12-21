@@ -1,9 +1,10 @@
+import numpy as np 
 import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 from torch.optim import Adam
 from sklearn.decomposition import PCA
-from sc_cool.utils.utils import shuffle_per_cell_type
+import os
 
 
 class Mod1Encoder(nn.Module):
@@ -179,13 +180,29 @@ class SimpleAutoEncoder(nn.Module):
     
 
 def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
-             device=None, **kwargs):
+             **kwargs):
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     hidden_dim = settings["hidden_dim"]
     latent_dim = settings["latent_dim"]
     batch_size = settings["batch_size"]
     lr = settings["lr"]
-    device = device
+    save_dir = kwargs["save_dir"]
+    seed = kwargs["seed"]
+    is_pca = kwargs["is_pca"]
+
+    if is_pca:
+    
+        # PCA transformations as the original paper stated
+        print("PCA transformation ...")
+        pca_mod1 = PCA(n_components=settings["PCs"])
+        pca_mod2 =PCA(n_components=settings["PCs"])
+        pca_mod1.fit(mod1_train)
+        pca_mod2.fit(mod2_train)
+        mod1_train = pca_mod1.transform(mod1_train)
+        mod2_train = pca_mod2.transform(mod2_train)
+        print("PCA finished.")
 
     mod1_encoder = Mod1Encoder(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
     mod1_decoder = Mod1Decoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
@@ -196,8 +213,6 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
     mod1_train_t = torch.from_numpy(mod1_train).to(torch.float32).to(device)
     mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32).to(device)
     
-    
-    
     mod1_ds = TensorDataset(mod1_train_t)
     mod2_ds = TensorDataset(mod2_train_t)
     mod1_dl = DataLoader(mod1_ds, batch_size, shuffle=False)
@@ -226,93 +241,29 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
 
         epoch_loss /= total_samples
         print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
-
-    return ae
-
-
-def train_ae_unpaired(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
-                      device=None, **kwargs):
     
-    hidden_dim = settings["hidden_dim"]
-    latent_dim = settings["latent_dim"]
-    batch_size = settings["batch_size"]
-    lr = settings["lr"]
-    device = device
-    seed = kwargs["seed"]
+    torch.save(ae.state_dict(), os.path.join(save_dir, "models", f"AE_{seed}"))
+    train_dict = {"model":ae}
+    if is_pca:
+        train_dict["pca_mod1"] = pca_mod1
+        train_dict["pca_mod2"] = pca_mod2
 
-    shuffled_mod2_train = shuffle_per_cell_type(data=mod2_train,
-                                                labels=labels_train,
-                                                seed=seed)
-    ######### DBUG
-    print(shuffled_mod2_train.shape)
-    #########
-
-
-    print("PCA transformation ...")
-    pca_mod1 = PCA(n_components=settings["PCs"])
-    pca_mod2 =PCA(n_components=settings["PCs"])
-    pca_mod1.fit(mod1_train)
-    pca_mod2.fit(mod2_train)
-    mod1_train = pca_mod1.transform(mod1_train)
-    mod2_train = pca_mod2.transform(mod2_train)
-    print("PCA finished.")
-
-
-    # Arrays to tensors
-    mod1_train_t = torch.from_numpy(mod1_train)
-    mod1_train_t = mod1_train_t.to(torch.float32)
-    mod1_train_t = mod1_train_t.to(device)
-    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32)
-    mod2_train_t = mod2_train_t.to(torch.float32)
-    mod2_train_t = mod2_train_t.to(device)
-
-    mod1_encoder = Mod1Encoder(mod1_train.shape[1], hidden_dim, latent_dim).to(device)
-    mod1_decoder = Mod1Decoder(latent_dim, hidden_dim, mod1_train.shape[1]).to(device)
-    mod2_encoder = Mod2Encoder(mod2_train.shape[1], hidden_dim, latent_dim).to(device)
-    mod2_decoder = Mod2Decoder(latent_dim, hidden_dim, mod2_train.shape[1]).to(device)
-    ae = SimpleAutoEncoder(mod1_encoder, mod2_encoder, mod1_decoder, mod2_decoder).to(device)
-
-    mod1_ds = TensorDataset(mod1_train_t)
-    mod2_ds = TensorDataset(mod2_train_t)
-    mod1_dl = DataLoader(mod1_ds, batch_size, shuffle=False)
-    mod2_dl = DataLoader(mod2_ds, batch_size, shuffle=False)
-
-    optimizer = Adam(ae.parameters(), lr=lr)
-    mse = nn.MSELoss()
-
-    for epoch in range(epochs):
-
-        ae.train()
-        epoch_loss = 0.0
-        total_samples = 0
-        for mod1_batch, mod2_batch in zip(mod1_dl, mod2_dl):
-
-            mod1_batch[0] = mod1_batch[0].to(device)
-            mod2_batch[0] = mod2_batch[0].to(device)
-            optimizer.zero_grad()
-            mod1_recon, mod2_recon, _, _ = ae(mod1_batch[0], mod2_batch[0])
-            loss = (mse(mod1_recon, mod1_batch[0]) + mse(mod2_recon, mod2_batch[0])) / 2
-
-            loss.backward()
-            optimizer.step()
-            epoch_loss += loss.item() * len(mod1_batch[0])
-            total_samples += len(mod1_batch[0])
-
-        epoch_loss /= total_samples
-        print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
-
-    return [ae, pca_mod1, pca_mod2]
+    return train_dict
 
     
-def get_emb_ae(mod1_test, mod2_test, labels_test=None, obj_list=None, 
-               save_dir=None, seed=None, device=None):
+def get_emb_ae(mod1_test, mod2_test, labels_test=None, train_dict=None, 
+               save_dir=None, **kwargs):
+     
+     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
-     model = obj_list[0]
-     pca_mod1 = obj_list[1]
-     pca_mod2 = obj_list[2]
-
-     mod1_test = pca_mod1.transform(mod1_test)
-     mod2_test = pca_mod2.transform(mod2_test)
+     model = train_dict["model"]
+     seed = kwargs["seed"]
+     is_pca = kwargs["is_pca"]
+     if is_pca:
+         pca_mod1 = train_dict["pca_mod1"]
+         pca_mod2 = train_dict["pca_mod2"]
+         mod1_test = pca_mod1.transform(mod1_test)
+         mod2_test = pca_mod2.transform(mod2_test)
 
      # Arrays to tensors
      mod1_test_t = torch.from_numpy(mod1_test)
@@ -327,5 +278,7 @@ def get_emb_ae(mod1_test, mod2_test, labels_test=None, obj_list=None,
  
      mod1_emb_np = mod1_emb.cpu().numpy()
      mod2_emb_np = mod2_emb.cpu().numpy()
+
+     np.save(os.path.join(save_dir, f"labels_test_{seed}.npy"), labels_test)
 
      return mod1_emb_np, mod2_emb_np

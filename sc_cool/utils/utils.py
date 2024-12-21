@@ -529,12 +529,12 @@ def make_extreme_unpaired(data1: np.array,
      """
      data1_unpaired_l = []
      data2_unpaired_l = []
+     ct_unpaired_l = []
 
      for ct in np.unique(cell_types):
           indices = np.where(cell_types == ct)[0]
 
           np.random.seed(seed)  
-          np.random.shuffle(indices)
 
           midpoint = len(indices) // 2
           data1_indices = indices[:midpoint]
@@ -542,13 +542,21 @@ def make_extreme_unpaired(data1: np.array,
 
           data1_unpaired_l.append(data1[data1_indices])
           data2_unpaired_l.append(data2[data2_indices])
+          ct_unpaired_l.append(cell_types[data1_indices])
 
      data1_unpaired = np.vstack(data1_unpaired_l)
      data2_unpaired = np.vstack(data2_unpaired_l)
+     ct_unpaired = np.concatenate(ct_unpaired_l)
+
+     shuffled_cells = np.random.permutation(len(data1_unpaired))
+     shuff_data1_unpaired = data1_unpaired[shuffled_cells]
+     shuff_data2_unpaired = data2_unpaired[shuffled_cells]
+     shuff_ct_unpaired = ct_unpaired[shuffled_cells]
 
      if rm_frac > 0:
-          data2_unpaired_ = remove_rows(data2_unpaired, 
+          data2_unpaired_ = remove_rows(shuff_data2_unpaired, 
                                         rm_frac,
-                                        seed=seed)   
+                                        seed=seed)
+     
 
-     return data1_unpaired, data2_unpaired_
+     return shuff_data1_unpaired, data2_unpaired_, shuff_ct_unpaired

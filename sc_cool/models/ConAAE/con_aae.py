@@ -14,6 +14,7 @@ import time
 
 
 def setup_args(args=[]):
+    """Source implementation of Wang et al.(2023)"""
 
     options = argparse.ArgumentParser()
 
@@ -65,69 +66,24 @@ def setup_args(args=[]):
 
 
 def train_con(mod1_train, mod2_train, labels_train, epochs,
-              settings=None, device=None):
+              settings=None, **kwargs):
     
-    # PCA transformations as the original paper stated
-    print("PCA transformation ...")
-    pca_mod1 = PCA(n_components=settings["PCs"])
-    pca_mod2 =PCA(n_components=settings["PCs"])
-    pca_mod1.fit(mod1_train)
-    pca_mod2.fit(mod2_train)
-    mod1_train = pca_mod1.transform(mod1_train)
-    mod2_train = pca_mod2.transform(mod2_train)
-    print("PCA finished.")
-
-    # Model parameters
-    args = setup_args(args=['--consistency-loss', '--contrastive-loss', '--triplet-loss', '--VAE', 
-                        '--conditional-adv', '--conditional', '--discriminator', '--MMD-loss', '--anchor-loss', 
-                        '-gpu'])
     
-    args.max_epochs = epochs
-
-    # Check device
-    if not torch.cuda.is_available():
-            args.use_gpu = False
-
-
-    # Arrays to tensors
-    mod1_train_t = torch.from_numpy(mod1_train).to(torch.float32)
-    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32)
-    labels_train_t = torch.from_numpy(labels_train).long()
-
-    # Create datasets
-    RNA_train_dataset = torch.utils.data.TensorDataset(mod1_train_t, labels_train_t)
-    ATAC_train_dataset = torch.utils.data.TensorDataset(mod2_train_t, labels_train_t)
-
-    # Create model object
-    con=conAAE(RNA_train_dataset,ATAC_train_dataset,args)
-
-    # Train the model
-    con.train()         
-
-    return [con, pca_mod1, pca_mod2]
-
-
-def train_con_unpaired(mod1_train, mod2_train, labels_train, epochs, 
-                       settings=None, device=None, **kwargs):
-    
+    save_dir = kwargs["save_dir"]
     seed = kwargs["seed"]
-     
-    shuffled_mod2_train = shuffle_per_cell_type(data=mod2_train,
-                                                labels=labels_train,
-                                                seed=seed)
-    ######### DBUG
-    print(shuffled_mod2_train.shape)
-    #########
+    is_pca = kwargs["is_pca"]
 
-    # PCA transformations as the original paper stated
-    print("PCA transformation ...")
-    pca_mod1 = PCA(n_components=settings["PCs"])
-    pca_mod2 =PCA(n_components=settings["PCs"])
-    pca_mod1.fit(mod1_train)
-    pca_mod2.fit(shuffled_mod2_train)
-    mod1_train = pca_mod1.transform(mod1_train)
-    mod2_train = pca_mod2.transform(shuffled_mod2_train)
-    print("PCA finished.")
+    if is_pca:
+    
+        # PCA transformations as the original paper stated
+        print("PCA transformation ...")
+        pca_mod1 = PCA(n_components=settings["PCs"])
+        pca_mod2 =PCA(n_components=settings["PCs"])
+        pca_mod1.fit(mod1_train)
+        pca_mod2.fit(mod2_train)
+        mod1_train = pca_mod1.transform(mod1_train)
+        mod2_train = pca_mod2.transform(mod2_train)
+        print("PCA finished.")
 
     # Model parameters
     args = setup_args(args=['--consistency-loss', '--contrastive-loss', '--triplet-loss', '--VAE', 
@@ -154,19 +110,30 @@ def train_con_unpaired(mod1_train, mod2_train, labels_train, epochs,
     con=conAAE(RNA_train_dataset,ATAC_train_dataset,args)
 
     # Train the model
-    con.train()         
+    con.train()
+    torch.save(con.netRNA.state_dict(), os.path.join(save_dir, "models", f"netRNA_{seed}.pt"))
+    torch.save(con.netATAC.state_dict(), os.path.join(save_dir, "models", f"netATAC_{seed}.pt"))
+    train_dict = {"model":con}
+    if is_pca:
+         train_dict["pca_mod1"] = pca_mod1
+         train_dict["pca_mod2"] = pca_mod2
 
-    return [con, pca_mod1, pca_mod2]
+    return train_dict
 
 
-def get_emb_con(mod1_test, mod2_test, labels_test, obj_list, save_dir=None, seed=None, device=None):
+def get_emb_con(mod1_test, mod2_test, labels_test, train_dict, save_dir=None,
+                **kwargs):
      
-     model = obj_list[0]
-     pca_mod1 = obj_list[1]
-     pca_mod2 = obj_list[2]
-
-     mod1_test = pca_mod1.transform(mod1_test)
-     mod2_test = pca_mod2.transform(mod2_test)
+     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+     
+     model = train_dict["model"]
+     seed = kwargs["seed"]
+     is_pca = kwargs["is_pca"]
+     if is_pca:
+          pca_mod1 = train_dict["pca_mod1"]
+          pca_mod2 = train_dict["pca_mod2"]
+          mod1_test = pca_mod1.transform(mod1_test)
+          mod2_test = pca_mod2.transform(mod2_test)
      
      # Check if the model is trained
      print(f"Is the model trained: {model.is_trained}")

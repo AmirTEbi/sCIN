@@ -171,12 +171,13 @@ class TripletLoss(nn.Module):
       dist=dist.clamp(min=1e-12).sqrt()
       
       mask=labels.expand(n,n).eq(labels.expand(n,n).t())
-      #print(mask.shape)
-      #print(mask[0])
+      print(mask.shape)
+      #print(mask[1] == 0)
       dist_ap,dist_an=[],[]
       for i in range(n):
-        #print(i)
+        print(i)
         dist_ap.append(dist[i][mask[i]].max().unsqueeze(0))
+        print(dist[i][mask[i]==0])
         dist_an.append(dist[i][mask[i]==0].min().unsqueeze(0))
       dist_ap=torch.cat(dist_ap)
       dist_an=torch.cat(dist_an)

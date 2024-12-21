@@ -162,7 +162,11 @@ class conAAE:
     #contrastive loss
     if self.args.contrastive_loss:
       inputs=torch.cat((atac_latents,rna_latents),0)
+      print(f"Shape of the Con inputs: {inputs.shape}")
+      print(inputs)
       labels=torch.cat((atac_class_labels,rna_class_labels),0)
+      print(f"Shape of the Con labels: {labels.shape}")
+      print(labels)
       tri_loss=self.triplet_loss(inputs,labels)
       loss+=self.args.alpha*tri_loss
     #cycle consistency loss    
@@ -315,7 +319,9 @@ class conAAE:
                 atac_inputs=torch.cat((atac_inputs,atac_signal_noise.float()),0)
                 
             rna_labels = rna_samples[1]
+            print(f"RNA labels: {rna_labels}")
             atac_labels = atac_samples[1]
+            print(f"ATAC labels: {atac_labels}")
                 #print(rna_labels.shape)
                 #print(atac_labels.shape)
             if self.args.augmentation:
