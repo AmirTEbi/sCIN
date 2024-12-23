@@ -550,11 +550,10 @@ def make_extreme_unpaired(data1: np.array,
 
      shuffled_cells = np.random.permutation(len(data1_unpaired))
      shuff_data1_unpaired = data1_unpaired[shuffled_cells]
-     shuff_data2_unpaired = data2_unpaired[shuffled_cells]
      shuff_ct_unpaired = ct_unpaired[shuffled_cells]
 
      if rm_frac > 0:
-          data2_unpaired_ = remove_rows(shuff_data2_unpaired, 
+          data2_unpaired_ = remove_rows(data2_unpaired, 
                                         rm_frac,
                                         seed=seed)
      
