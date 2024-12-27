@@ -3,7 +3,7 @@ __pycache__/
 
 venv/
 .venv/
-fig/
+figs/
 
 results/
 Documentation/
