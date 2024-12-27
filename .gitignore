@@ -4,6 +4,8 @@ __pycache__/
 venv/
 .venv/
 figs/
+Perturb-OT/
+notebooks/
 
 results/
 Documentation/
