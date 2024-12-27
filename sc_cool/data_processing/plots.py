@@ -31,7 +31,9 @@ def plot_recall_at_k(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     """
 
     model_colors = {
-        "Ours": "#e41a1c",  
+        "Ours": "#e41a1c",
+        "Ours_paired":"#4daf4a",
+        "Ours_unpaired":"#984ea3", 
         "Con-AAE": "#377eb8",   
         "AE": "#ff7f00", 
     }
@@ -101,7 +103,9 @@ def plot_cell_type_accuracy(data:pd.DataFrame, save_dir:str, model_name:str) -> 
     """
 
     colors = {
-        "Ours": "#e41a1c",  
+        "Ours": "#e41a1c",
+        "Ours_paired":"#4daf4a",
+        "Ours_unpaired":"#984ea3",  
         "Con-AAE": "#377eb8", 
         "Harmony": "#4daf4a",  
         "MOFA": "#984ea3",  
@@ -149,7 +153,9 @@ def plot_MedR(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     """
 
     colors = {
-        "Ours": "#e41a1c",  
+        "Ours": "#e41a1c",
+        "Ours_paired":"#4daf4a",
+        "Ours_unpaired":"#984ea3",  
         "Con-AAE": "#377eb8", 
         "Harmony": "#4daf4a",  
         "MOFA": "#984ea3",  
@@ -202,7 +208,9 @@ def plot_asw(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     """
 
     colors = {
-        "Ours": "#e41a1c",  
+        "Ours": "#e41a1c",
+        "Ours_paired":"#4daf4a",
+        "Ours_unpaired":"#984ea3",  
         "Con-AAE": "#377eb8", 
         "Harmony": "#4daf4a",  
         "MOFA": "#984ea3",  
