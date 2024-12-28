@@ -28,7 +28,7 @@ class GEXDecoder(nn.Module):
             layers.append(nn.Linear(in_features, out_features))
 
             if batch_norm:
-                layers.append(nn.BatchNorm1d())
+                layers.append(nn.BatchNorm1d(out_features))
             
             if activation == "relu":
                 layers.append(nn.ReLU())
@@ -53,10 +53,8 @@ class GEXDecoder(nn.Module):
 
 def list_embs(dir: str) -> Tuple:
 
-    return ([os.path.joint(dir, f"rna_emb{i}.npy") \
-            for i in range(0, 100, 10)], 
-            [os.path.joint(dir, f"atac_emb{i}.npy") \
-             for i in range(0, 100, 10)])
+    return [os.path.join(dir, f"atac_emb{i}.npy") \
+            for i in range(0, 100, 10)]
 
 
 def get_gt(path: str, seed: int) -> np.array:
@@ -84,63 +82,56 @@ def train_val_gex_decoder(config: Dict, data: str, model: str,
     is_checkpoints = config["is_checkpoints"]
 
     checkpoint_dir = os.path.join(save_dir, "checkpoints")
+    os.makedirs(checkpoint_dir, exist_ok=True)
     best_model_path = os.path.join(checkpoint_dir, "best_model.pt")
-    if not os.path.exists(checkpoint_dir):
-        os.makedirs(checkpoint_dir)
-
+    os.makedirs(os.path.join(save_dir, "test_data"), exist_ok=True)
 
     if data == "SHARE":
-        mod1_embs, mod2_embs = list_embs(os.path.join("results", 
-                                                      data, model, "embs"))
-        gt = get_gt("data/share/Ma-2020-RNA.h5ad")
-   
+        mod2_embs = list_embs(os.path.join("results", data, model, "embs"))
+        gt = get_gt("data/share/Ma-2020-RNA.h5ad", seed=42)
     elif data == "PBMC":
-        mod1_embs, mod2_embs = list_embs(os.path.join("results", 
-                                                      data, model, "embs"))
-        gt = get_gt("data/10x/10x-Multiome-Pbmc10k-RNA.h5ad")
-
+        mod2_embs = list_embs(os.path.join("results", data, model, "embs"))
+        gt = get_gt("data/10x/10x-Multiome-Pbmc10k-RNA.h5ad", seed=42)
     elif data == "CITE":
-        mod1_embs, mod2_embs = list_embs(os.path.join("results", 
-                                                      data, model, "embs"))
-        gt = get_gt("data/cite/rna.h5ad")
+        mod2_embs = list_embs(os.path.join("results", data, model, "embs"))
+        gt = get_gt("data/cite/rna.h5ad", seed=42)
 
-    for path1, path2 in zip(mod1_embs, mod2_embs):
-        emb1 = np.load(path1)
-        emb2 = np.load(path2)
-        joint_emb = np.concatenate([emb1, emb2], axis=1)
-        in_dim = joint_emb.shape[1]
+
+    for path in enumerate(mod2_embs):
+        emb2 = np.load(path)
+        in_dim = emb2.shape[1]
         out_dim = gt.shape[1]
-        print(f"Shape of the joint embeddings: {joint_emb.shape}")
-        print(f"Shape of the ground truth: {gt.shape}")
+        print(f"Shape of the Second moality embeddings: {emb2.shape}")
+        print(f"Shape of the GEX ground truth: {gt.shape}")
 
         try:
-            joint_emb_train, joint_emb_n_train,\
-            gt_train, gt_n_train = train_test_split(emb1,
+            emb2_train, emb2_n_train, \
+                gt_train, gt_n_train = train_test_split(
                                                     emb2,
                                                     gt,
                                                     test_size=0.3,
                                                     random_state=42)
         except ValueError as e:
-            print("Dimension mismatch error between embeddings and\
+            print(f"Dimension mismatch error between embeddings and\
                   the ground truth: {e}")
         
-        joint_emb_val, joint_emb_test,\
-        gt_val, gt_test = train_test_split(joint_emb_n_train,
+        emb2_val, emb2_test,\
+            gt_val, gt_test = train_test_split(emb2_n_train,
                                            gt_n_train,
                                            test_size=0.3,
                                            random_state=42)
  
-        train_dataset = TensorDataset(torch.tensor(joint_emb_train, dtype=torch.float32),
+        train_dataset = TensorDataset(torch.tensor(emb2_train, dtype=torch.float32),
                                 torch.tensor(gt_train, dtype=torch.float32))
-        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False)
+        train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
 
-        val_dataset = TensorDataset(torch.tensor(joint_emb_val, dtype=torch.float32),
+        val_dataset = TensorDataset(torch.tensor(emb2_val, dtype=torch.float32),
                                 torch.tensor(gt_val, dtype=torch.float32))
-        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+        val_dataloader = DataLoader(val_dataset, batch_size=batch_size, shuffle=True)
 
-        rep = mod1_embs.index(emb1)
+        rep = mod2_embs.index(emb2)
         print(f"Seed is {rep}")
-        np.save(os.path.join(save_dir, "test_data", f"joint_emb_test_rep{rep}.npy", joint_emb_test))
+        np.save(os.path.join(save_dir, "test_data", f"emb2_test_rep{rep}.npy", emb2_test))
         np.save(os.path.join(save_dir, "test_data", f"ground_truth_rep{rep}.npy", gt_test))
         
 
@@ -152,10 +143,6 @@ def train_val_gex_decoder(config: Dict, data: str, model: str,
         criterion = nn.MSELoss()
 
         if is_checkpoints:
-            
-            checkpoint_dir = os.path.join(save_dir, "checkpoints")
-            if not os.path.exists(checkpoint_dir):
-                os.makedirs(checkpoint_dir)
             checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint_rep{rep}.pt")
             if os.path.exists(checkpoint_path):
                 checkpoint = torch.load(checkpoint_path)
@@ -163,8 +150,8 @@ def train_val_gex_decoder(config: Dict, data: str, model: str,
                 optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
 
         
-        best_val_loss = float("inf")      
-        for epoch in range(100):
+        best_val_loss = float("inf")
+        for epoch in range(epochs):
             model.train()
             running_train_loss = 0.0
             for emb, gt_ in train_dataloader:
@@ -182,9 +169,9 @@ def train_val_gex_decoder(config: Dict, data: str, model: str,
                 for val_emb, val_gt_ in val_dataloader:
                     val_out = model(val_emb)
                     val_batch_loss = criterion(val_out, val_gt_)
-                    running_val_loss += val_batch_loss
-                avg_val_loss = running_val_loss / len(val_dataloader)
-            
+                    running_val_loss += val_batch_loss.item()
+            avg_val_loss = running_val_loss / len(val_dataloader)
+
             current_checkpoint_path = os.path.join(checkpoint_dir, f"checkpoint.pt")
             torch.save(
                 {
