@@ -5,6 +5,8 @@ import anndata as ad
 import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA, IncrementalPCA
+from sklearn.manifold import TSNE
+import colorcet as cc
 import torch
 import networkx as nx
 import json
@@ -12,6 +14,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import anndata as ad
 from typing import Any, Tuple
+import os
 
 def impute_cells(labels):
     """Make same-size label arrays
@@ -398,6 +401,146 @@ def make_plots(results_df, save_dir):
     plt.ylabel('Mean ASW')
     plt.savefig(save_dir + "/box_model_asw.png")
 
+
+def plot_tsne_original(data: np.array, labels: np.array, 
+                       is_show=False, save_dir=None) -> None:
+     """
+     Plot t-SNE embeddings of the original multi-omics dataset.
+
+     Parameters
+     ----------
+     data: Original, concatenated, paired multi-omics data.
+           It has the shape (num_cells, (num_features1 + num_features2))
+
+     labels: Cell type labels. It has the shape (num_cells,)
+
+     is_show: Whether to show the plot or save it.
+
+     save_dir: save directory
+
+     Return
+     ----------
+     None
+     """
+
+     tsne_embs = TSNE(n_components=2, learning_rate='auto',
+                  init='random').fit_transform(data)
+     cell_types = np.unique(labels)
+     colors = cc.glasbey[:len(cell_types)]
+     for i, cell_type in enumerate(cell_types):
+          mask = labels == cell_type
+          plt.scatter(tsne_embs[mask, 0], tsne_embs[mask, 1], 
+                         s=0.5, label=f" {cell_type}", color=colors[i])
+     
+     plt.tick_params(axis='both', which='major', labelsize=8)
+     ax = plt.gca()  
+     ax.spines['top'].set_visible(False)
+     ax.spines['right'].set_visible(False)
+     plt.legend(
+     title="Cell Types", 
+     bbox_to_anchor=(0.5, -0.1),  
+     loc='upper center',          
+     fontsize=8, 
+     ncol=5,                     
+     frameon=False,
+     handleheight=1,           
+     markerscale=6               
+     )
+
+     if is_show:
+          plt.show()
+     else:
+          plt.savefig(os.path.join(save_dir, "tsne_original.png"))
+
+
+def plot_tsne_embs(joint_embs:np.array, labels:np.array, 
+                   is_show=False, save_dir=None) -> None:
+     """
+     Plot t-SNE embeddings of the joint embeddings from a model.
+
+     Parameters
+     ----------
+     data: Concatenated joint embeddings.
+           It has the shape (num_cells, 2 * emb_dim). Note that num_cells is 
+           the number of **test cells**.
+
+     labels: Cell type labels. It has the shape (num_cells,)
+
+     is_show: Whether to show the plot or save it.
+
+     save_dir: save directory
+
+     Return
+     ----------
+     None
+     """
+
+     tsne_embs = TSNE(n_components=2, learning_rate='auto',
+                  init='random').fit_transform(joint_embs)
+     cell_types = np.unique(labels)
+     colors = cc.glasbey[:len(cell_types)]
+     for i, cell_type in enumerate(cell_types):
+          mask = labels == cell_type
+          plt.scatter(tsne_embs[mask, 0], tsne_embs[mask, 1], 
+                         s=0.5, label=f" {cell_type}", color=colors[i])
+     
+     plt.tick_params(axis='both', which='major', labelsize=8)
+     ax = plt.gca()  
+     ax.spines['top'].set_visible(False)
+     ax.spines['right'].set_visible(False)
+     plt.legend(
+     title="Cell Types", 
+     bbox_to_anchor=(0.5, -0.1),  
+     loc='upper center',          
+     fontsize=8, 
+     ncol=5,                     
+     frameon=False,
+     handleheight=1,           
+     markerscale=6               
+     )
+
+     if is_show:
+          plt.show()
+     else:
+          plt.savefig(os.path.join(save_dir, "tsne_joint_embs.png"))
+
+
+def map_cell_types(path:str) -> dict:
+
+     """
+     Map encoded cell types to cell type names.
+
+     Parameters
+     ----------
+     path: Path to the mapping file.
+
+     Return
+     ----------
+     ct_mapping: A dictionary containing mapped cell types. 
+     """
+     
+     with open(path, "r") as f:
+          ct_mapping = {}
+          for line in f:
+               k, v = line.strip().split(":", 1)
+               ct_mapping[int(k)] = v.strip()
+     
+     return ct_mapping
+
+
+def list_embs(embs_dir:str, seeds:list, is_ct=False) -> list:
+
+     embs_paths = []
+     for seed in seeds:
+          path1 = os.path.join(embs_dir, f"rna_emb{seed}.noy")
+          path2 = os.path.join(embs_dir, f"atac_emb{seed}.npy")
+          if is_ct:
+               path_ct = os.path.join(embs_dir, f"labels_test_{seed}.npy")
+               embs_paths.append((path1, path2, path_ct))
+          else:
+               embs_paths.append((path1, path2))
+     
+     return embs_paths
 
 def select_unpaired_cells_by_type(label_indices, bob, rng):
 
