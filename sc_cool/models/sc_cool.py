@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from torch.optim import Adam
 from sklearn.decomposition import PCA
 from sc_cool.utils.utils import impute_cells, shuffle_per_cell_type
-from typing import Dict
+from itertools import cycle
 import os
 
 
@@ -315,6 +315,139 @@ def train_sccool(mod1_train: np.array, mod2_train: np.array, labels_train: np.ar
     return train_dict
 
 
+def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array, 
+                        labels_train: list, epochs: int, settings: dict, **kwargs) -> dict:
+    """
+    Train sCIN model in an unpaired setting.
+
+    Parameters
+    ----------
+    mod1_train: Training data for the first modality.
+    mod2_train: Training data for the second modality.
+    labels_train: List of the training labeles for both modalitis.
+        Example: [labels_train1, labels_train2]
+    epochs: Training epochs
+    settings: Model's hyper-parameters and options.
+
+    Return
+    ----------
+    train_dict: A dictionary containing the trained model and PCA transformations 
+    of both modalities.
+    """
+    
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    t = settings["t"]
+    lr = settings["lr"]
+    hidden_dim = settings["hidden_dim"]
+    latent_dim = settings["latent_dim"]
+    bob = settings["sbob"]
+    save_dir = kwargs["save_dir"]
+    seed = kwargs["seed"]
+    is_pca = kwargs["is_pca"]
+
+    if is_pca:
+        # PCA transformations
+        print("PCA transformation ...")
+        pca_mod1 = PCA(n_components=settings["PCs"])
+        pca_mod2 =PCA(n_components=settings["PCs"])
+        pca_mod1.fit(mod1_train)
+        pca_mod2.fit(mod2_train)
+        mod1_train = pca_mod1.transform(mod1_train)
+        mod2_train = pca_mod2.transform(mod2_train)
+        print("PCA finished.")
+
+    # Arrays to tensors
+    mod1_train_t = torch.from_numpy(mod1_train)
+    mod1_train_t = mod1_train_t.to(torch.float32)
+    mod1_train_t = mod1_train_t.to(device)
+    mod2_train_t = torch.from_numpy(mod2_train).to(torch.float32)
+    mod2_train_t = mod2_train_t.to(torch.float32)
+    mod2_train_t = mod2_train_t.to(device)
+
+    lbls1 = labels_train[0]
+    lbls2 = labels_train[1]
+    num_classes = len(np.unique(lbls1))
+    target = torch.arange(num_classes)
+    imputed_cell_types1 = impute_cells(lbls1)
+    imputed_cell_types2 = impute_cells(lbls2)
+    label_indices1 = []
+    for key in imputed_cell_types1.keys():
+        label_indices1.append(imputed_cell_types1[key])
+    
+    label_indices2 = []
+    for key in imputed_cell_types2.keys():
+        label_indices2.append(imputed_cell_types2[key])
+    
+    lbls_cycle1 = {ct: cycle(indices) for ct, indices in enumerate(label_indices1)}
+    lbls_cycle2 = {ct: cycle(indices) for ct, indices in enumerate(label_indices2)}
+
+    mod1_encoder = Mod1Encoder(mod1_train_t.shape[1], hidden_dim, latent_dim)
+    mod1_encoder.to(device)
+    mod2_encoder = Mod2Encoder(mod2_train_t.shape[1], hidden_dim, latent_dim)
+    mod2_encoder.to(device)
+    cool = scCOOL(mod1_encoder, mod2_encoder, t)
+    cool.to(device)
+    optimizer = Adam(cool.parameters(), lr=lr)
+    
+    for epoch in range(epochs):
+
+        cool.train()
+        epoch_loss = 0.0
+        total_samples = 0
+        total_batches = len(label_indices2[0])
+
+        for batch in range(0, total_batches, bob):
+            mod1_batch = []
+            mod2_batch = []
+
+            for _ in range(bob):
+
+                for ct in range(num_classes):
+                    mod1_cell = next(lbls_cycle1[ct])
+                    mod2_cell = next(lbls_cycle2[ct])
+
+                    mod1_batch.append(mod1_train_t[mod1_cell, :])
+                    mod2_batch.append(mod2_train_t[mod2_cell, :])
+                
+            mod1_batch = torch.vstack(mod1_batch)
+            mod2_batch = torch.vstack(mod2_batch)
+
+            logits, _, _ = cool(mod1_batch, mod2_batch)
+            block_size = num_classes
+            losses = []
+            for b in range(bob):
+                start = b * block_size
+                end = start + block_size
+                sub_logits = logits[start:end, start:end]
+                losses.append(F.cross_entropy(sub_logits, target) + \
+                              F.cross_entropy(sub_logits.T, target))
+            
+            batch_loss = sum(losses)
+            optimizer.zero_grad()
+            batch_loss.backward()
+            optimizer.step()
+
+            epoch_loss += batch_loss.item()
+            total_samples += bob * num_classes
+
+        epoch_loss /= total_samples
+        print(f"Epoch: {epoch} | Loss: {epoch_loss:.4f}")
+
+    model_dir = os.path.join(save_dir, "models")
+    if not os.path.exists(model_dir):
+        os.makedirs(model_dir)
+
+    torch.save(cool.state_dict(), os.path.join(model_dir, f"cool_{seed}"))
+
+    train_dict = {"model":cool}
+    if is_pca:
+        train_dict["pca_mod1"] = pca_mod1
+        train_dict["pca_mod2"] = pca_mod2
+    
+    return train_dict
+
+        
 def get_emb_sccool(mod1_test, mod2_test, labels_test, 
                    train_dict, save_dir, **kwargs):
 
