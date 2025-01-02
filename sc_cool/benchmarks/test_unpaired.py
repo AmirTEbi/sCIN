@@ -16,7 +16,7 @@ from sc_cool.utils.utils import (split_full_data,
                                    make_plots,
                                    make_unpaired_v2)  ###
 
-from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_dynamic_bob, train_static_bob, train_sccool, get_emb_sccool)
+from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_cool_unpaired, get_emb_sccool)
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
 
 from sc_cool.models.AE import (Mod1Encoder, 
@@ -72,7 +72,7 @@ def main():
         settings = config["SETTINGS"][model_name]
 
         train_func_name, get_emb_func_name = get_func_name(model_name)
-        train_func = globals().get(train_func_name)
+        train_func = train_cool_unpaired
         get_emb_func = globals().get(get_emb_func_name)
 
         print(f"Experiment for model {model_name} has been started!")
@@ -102,18 +102,18 @@ def main():
             
             print("Data splitted!")
 
-            rna_train_unpaired, atac_train_unpaired, lbls_train_unpaired = make_unpaired_v2(rna_train, atac_train,labels_train,seed=seed)
-            print(f"Shape of the Mod1 training data: {rna_train_unpaired.shape}")
-            print(f"Shape of the Mod2 training data: {atac_train_unpaired.shape}")
-            print(f"Shape of the Mod2 training labels: {lbls_train_unpaired.shape}")
+            mod1_train_unpaired, lbls_unpaired1, mod2_train_unpaired, lbls_unpaired2 = make_unpaired_v2(rna_train, atac_train,labels_train,seed=seed)
+            print(f"Shape of the Mod1 training data: {mod1_train_unpaired.shape}")
+            print(f"Shape of the Mod2 training data: {mod2_train_unpaired.shape}")
+            print(f"Shape of the Mod1 training labels: {lbls_unpaired1.shape}")
+            print(f"Shape of the Mod2 training labels: {lbls_unpaired2.shape}")
 
             #break
-            print(lbls_train_unpaired)
 
             print(f"Training has been started!")
             TrainTime0 = time.time()
 
-            train_dict = train_func(rna_train_unpaired, atac_train_unpaired, lbls_train_unpaired, epochs=epochs, 
+            train_dict = train_func(mod1_train_unpaired, mod2_train_unpaired, [lbls_unpaired1, lbls_unpaired2], epochs=epochs, 
                                   settings=settings, seed=seed, save_dir=config["SAVE_DIRS"][model_name],
                                   is_pca=True)
             
