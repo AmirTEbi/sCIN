@@ -759,24 +759,29 @@ def make_unpaired_v2(mod1, mod2, labels, seed):
 
      mod1_list = []
      mod2_list = []
-     lbls_list = []
-     keep_cells_mod1 = np.zeros(len(labels), dtype=bool)
+     lbls_list_mod1 = []
+     lbls_list_mod2 = []
      np.random.seed(seed)
-     
 
      for lbl in np.unique(labels):
-          print(lbl)
+
           indices = np.where(labels == lbl)[0]
-          mod1_cells = np.random.choice(indices, 
-                                          min(len(indices), round(0.9 * len(indices))), 
-                                          replace=False)
-          mod2_cells = np.setdiff1d(indices, mod1_cells, assume_unique=True)  
+
+          mod2_cells = np.random.choice(indices, 
+                                      max(1, round(0.1 * len(indices))), 
+                                      replace=False)  
+          mod1_cells = np.setdiff1d(indices, mod2_cells, assume_unique=True)  
+
           mod1_list.append(mod1[mod1_cells])
           mod2_list.append(mod2[mod2_cells])
-          lbls_list.append(labels[mod1_cells])
+          lbls_list_mod1.append(labels[mod1_cells])
+          lbls_list_mod2.append(labels[mod2_cells])
 
-     mod1_new = np.vstack(mod1_list)
-     mod2_new = np.vstack(mod2_list)
-     labels_new = np.concatenate(lbls_list)
+          mod1_new = np.vstack(mod1_list)
+          mod2_new = np.vstack(mod2_list)
+          labels_mod1_new = np.concatenate(lbls_list_mod1)
+          labels_mod2_new = np.concatenate(lbls_list_mod2)
+          print(f"Is same cell types in both mods: {np.equal(np.unique(labels_mod1_new), 
+                                                             np.unique(labels_mod2_new))}")
      
-     return mod1_new, mod2_new, labels_new
+     return mod1_new, labels_mod1_new, mod2_new, labels_mod2_new
