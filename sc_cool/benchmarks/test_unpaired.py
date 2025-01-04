@@ -16,7 +16,7 @@ from sc_cool.utils.utils import (split_full_data,
                                    make_plots,
                                    make_unpaired_v2)  ###
 
-from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_cool_unpaired, get_emb_sccool)
+from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_sCIN_unpaired, get_emb_sCIN)
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
 
 from sc_cool.models.AE import (Mod1Encoder, 
@@ -72,7 +72,7 @@ def main():
         settings = config["SETTINGS"][model_name]
 
         train_func_name, get_emb_func_name = get_func_name(model_name)
-        train_func = train_cool_unpaired
+        train_func = train_sCIN_unpaired
         get_emb_func = globals().get(get_emb_func_name)
 
         print(f"Experiment for model {model_name} has been started!")
@@ -164,7 +164,7 @@ def main():
                                    index=False)
     make_plots(results_df, config["SAVE_DIRS"]["EXP"])
 
-    print("All experiments has been finished!")
+    print("All experiments are finished!")
 
 if __name__ == "__main__":
     main()
