@@ -276,8 +276,8 @@ def train_classifier(rna_inputs, atac_inputs, rna_model, atac_model,
 
 def get_func_name(model_name):
      
-     if model_name == "scCOOL":
-          return "train_sccool", "get_emb_sccool"
+     if model_name == "sCIN":
+          return "train_sccool", "get_emb_sCIN"
      
      elif model_name == "AE":
           return "train_ae", "get_emb_ae"
@@ -508,7 +508,7 @@ def plot_tsne_embs(joint_embs:np.array, labels:np.array,
 def map_cell_types(path:str) -> dict:
 
      """
-     Map encoded cell types to cell type names.
+     Map encoded cell types to the cell type names.
 
      Parameters
      ----------
@@ -781,7 +781,41 @@ def make_unpaired_v2(mod1, mod2, labels, seed):
           mod2_new = np.vstack(mod2_list)
           labels_mod1_new = np.concatenate(lbls_list_mod1)
           labels_mod2_new = np.concatenate(lbls_list_mod2)
-          print(f"Is same cell types in both mods: {np.equal(np.unique(labels_mod1_new), 
+     print(f"Is same cell types in both mods: {np.equal(np.unique(labels_mod1_new), 
                                                              np.unique(labels_mod2_new))}")
      
      return mod1_new, labels_mod1_new, mod2_new, labels_mod2_new
+
+
+def make_unpaired_v3(mod1, mod2, labels, seed, p=0.1):
+
+     mod1_list = []
+     mod2_list = []
+     lbls_list_mod1 = []
+     lbls_list_mod2 = []
+     np.random.seed(seed)
+
+     for lbl in np.unique(labels):
+
+          indices = np.where(labels == lbl)[0]
+          mod2_cells = np.random.choice(indices, 
+                                      max(1, round(p * len(indices))), 
+                                      replace=False)  
+          mod1_cells = np.setdiff1d(indices, mod2_cells, assume_unique=True)
+          print(np.array_equal(mod2_cells, mod1_cells))  # Should be False
+
+          mod1_list.append(mod1[mod1_cells])
+          mod2_list.append(mod2[mod2_cells])
+          lbls_list_mod1.append(labels[mod1_cells])
+          lbls_list_mod2.append(labels[mod2_cells])
+
+          mod1_new = np.vstack(mod1_list)
+          mod2_new = np.vstack(mod2_list)
+          labels_mod1_new = np.concatenate(lbls_list_mod1)
+          labels_mod2_new = np.concatenate(lbls_list_mod2)
+
+     print(np.array_equal(np.unique(labels_mod1_new),
+                          np.unique(labels_mod2_new)))  # Should be True
+     
+     return mod1_new, labels_mod1_new, mod2_new, labels_mod2_new
+     
