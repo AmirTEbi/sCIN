@@ -248,7 +248,7 @@ def train_dynamic_bob(cool, mod1_train_t, mod2_train_t, label_indices,
     
 
 def train_sccool(mod1_train: np.array, mod2_train: np.array, labels_train: np.array, 
-                 epochs: int, settings: Dict, **kwargs):
+                 epochs: int, settings: dict, **kwargs):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -315,7 +315,7 @@ def train_sccool(mod1_train: np.array, mod2_train: np.array, labels_train: np.ar
     return train_dict
 
 
-def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array, 
+def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array, 
                         labels_train: list, epochs: int, settings: dict, **kwargs) -> dict:
     """
     Train sCIN model in an unpaired setting.
@@ -341,7 +341,7 @@ def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array,
     lr = settings["lr"]
     hidden_dim = settings["hidden_dim"]
     latent_dim = settings["latent_dim"]
-    bob = settings["sbob"]
+    bob = settings["bob"]
     save_dir = kwargs["save_dir"]
     seed = kwargs["seed"]
     is_pca = kwargs["is_pca"]
@@ -349,8 +349,9 @@ def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array,
     if is_pca:
         # PCA transformations
         print("PCA transformation ...")
-        pca_mod1 = PCA(n_components=settings["PCs"])
-        pca_mod2 =PCA(n_components=settings["PCs"])
+        PCs = min(len(mod2_train), settings["PCs"])
+        pca_mod1 = PCA(n_components=PCs)
+        pca_mod2 =PCA(n_components=PCs)
         pca_mod1.fit(mod1_train)
         pca_mod2.fit(mod2_train)
         mod1_train = pca_mod1.transform(mod1_train)
@@ -369,6 +370,7 @@ def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array,
     lbls2 = labels_train[1]
     num_classes = len(np.unique(lbls1))
     target = torch.arange(num_classes)
+    target = target.to(device)
     imputed_cell_types1 = impute_cells(lbls1)
     imputed_cell_types2 = impute_cells(lbls2)
     label_indices1 = []
@@ -438,7 +440,7 @@ def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array,
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
 
-    torch.save(cool.state_dict(), os.path.join(model_dir, f"cool_{seed}"))
+    torch.save(cool.state_dict(), os.path.join(model_dir, f"sCIN_{seed}"))
 
     train_dict = {"model":cool}
     if is_pca:
@@ -448,7 +450,7 @@ def train_cool_unpaired(mod1_train: np.array, mod2_train: np.array,
     return train_dict
 
         
-def get_emb_sccool(mod1_test, mod2_test, labels_test, 
+def get_emb_sCIN(mod1_test, mod2_test, labels_test, 
                    train_dict, save_dir, **kwargs):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -474,15 +476,21 @@ def get_emb_sccool(mod1_test, mod2_test, labels_test,
     mod2_test_t = mod2_test_t.to(device)
 
     with torch.no_grad():
-        logits_test, mod1_emb, mod2_test = model(mod1_test_t, mod2_test_t)
+        logits_test, mod1_emb, mod2_emb = model(mod1_test_t, mod2_test_t)
 
     print("Embeddings were generated.")
 
     mod1_emb_np = mod1_emb.cpu().numpy()
-    mod2_emb_np = mod2_test.cpu().numpy()
+    mod2_emb_np = mod2_emb.cpu().numpy()
     logits_test = logits_test.cpu().numpy()
 
-    np.save(os.path.join(save_dir, f"labels_test_{seed}.npy"), labels_test)
-    np.save(os.path.join(save_dir, f"logits_test_{seed}.npy"), logits_test)
+    embs_dir = os.path.join(save_dir, "embs")
+    if not os.path.exists(embs_dir):
+        os.makedirs(embs_dir, exist_ok=True)
 
+    np.save(os.path.join(embs_dir, f"labels_test_{seed}.npy"), labels_test)
+    np.save(os.path.join(embs_dir, f"logits_test_{seed}.npy"), logits_test)
+    np.save(os.path.join(embs_dir, f"rna_emb{seed}.npy"), mod1_emb_np)
+    np.save(os.path.join(embs_dir, f"atac_emb{seed}.npy"), mod2_emb_np)
+    
     return mod1_emb_np, mod2_emb_np
