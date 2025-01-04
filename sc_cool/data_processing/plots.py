@@ -31,15 +31,15 @@ def plot_recall_at_k(data:pd.DataFrame, save_dir:str, model_name:str) -> None:
     """
 
     model_colors = {
-        "Ours": "#e41a1c",
         "Ours_paired":"#4daf4a",
-        "Ours_unpaired":"#984ea3", 
-        "Con-AAE": "#377eb8",   
-        "AE": "#ff7f00", 
+        "Ours_unpaired":"#984ea3",  
     }
 
     """   "Harmony": "#4daf4a",  
         "MOFA": "#984ea3",
+        "Con-AAE": "#377eb8",   
+        "AE": "#ff7f00",
+        "Ours": "#e41a1c",
  """
 
     grouped_data = data.groupby(['Models', 'k'])['Recall_at_k'].agg(['mean', 'std']).reset_index()
