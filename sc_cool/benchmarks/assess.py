@@ -82,16 +82,12 @@ def assess(mod1_embs, mod2_embs, labels_test, n_pc=10,
     plt.title("PCA plot of embeddings for replicate" + "" + str(seed))
     plt.xlabel("PC 1")
     plt.ylabel("PC 2")
-    plt.savefig(save_dir, f"rep{seed}.png")
+    plt.savefig(os.path.join(save_dir, f"rep{seed}.png"))
 
     # Compute metrics
     recall_at_k, num_pairs, cell_type_acc = compute_metrics(mod2_embs, mod1_embs, labels_test)
 
     # Compute ASW
     asw = (silhouette_score(joint_emb, labels_test) + 1) / 2
-
-    # Save embddings
-    np.save(os.path.join(save_dir, "embs", f"rna_emb{seed}"), mod1_embs)
-    np.save(os.path.join(save_dir, "embs", f"atac_emb{seed}"), mod2_embs)
 
     return recall_at_k, num_pairs, cell_type_acc, asw
