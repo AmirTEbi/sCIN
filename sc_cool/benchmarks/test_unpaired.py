@@ -14,7 +14,7 @@ from sc_cool.utils.utils import (split_full_data,
                                    train_autoencoders, 
                                    train_classifier, 
                                    make_plots,
-                                   make_unpaired_v2)  ###
+                                   make_unpaired_v4)  ###
 
 from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_sCIN_unpaired, get_emb_sCIN)
 from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
@@ -102,7 +102,7 @@ def main():
             
             print("Data splitted!")
 
-            mod1_train_unpaired, lbls_unpaired1, mod2_train_unpaired, lbls_unpaired2 = make_unpaired_v2(rna_train, atac_train,labels_train,seed=seed)
+            mod1_train_unpaired, lbls_unpaired1, mod2_train_unpaired, lbls_unpaired2 = make_unpaired_v4(rna_train, atac_train,labels_train,seed=seed)
             print(f"Shape of the Mod1 training data: {mod1_train_unpaired.shape}")
             print(f"Shape of the Mod2 training data: {mod2_train_unpaired.shape}")
             print(f"Shape of the Mod1 training labels: {lbls_unpaired1.shape}")
