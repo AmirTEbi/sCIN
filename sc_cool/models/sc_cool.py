@@ -315,6 +315,32 @@ def train_sccool(mod1_train: np.array, mod2_train: np.array, labels_train: np.ar
     return train_dict
 
 
+def pca_with_nans(data1, data2, n_components):
+
+    nan_mask1 = np.isnan(data1).all(axis=1)
+    nan_mask2 = np.isnan(data2).all(axis=1)
+
+    non_nans1 = data1[~nan_mask1]
+    non_nans2 = data2[~nan_mask2]
+    #print(non_nans2)
+
+    PCs1 = min(len(non_nans1), n_components)
+    PCs2 = min(len(non_nans2), n_components)
+    pca1 = PCA(n_components=PCs1)
+    pca2 = PCA(n_components=PCs2)
+    pca1.fit(non_nans1)
+    pca2.fit(non_nans2)
+    non_nans_pca1 = pca1.transform(non_nans1)
+    non_nans_pca2 = pca2.transform(non_nans2)
+
+    data1_pca = np.full((data1.shape[0], PCs1), np.nan, dtype=float)
+    data2_pca = np.full((data2.shape[0], PCs2), np.nan, dtype=float)
+    data1_pca[~nan_mask1] = non_nans_pca1
+    data2_pca[~nan_mask2] = non_nans_pca2
+
+    return data1_pca, data2_pca, pca1, pca2
+
+
 def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array, 
                         labels_train: list, epochs: int, settings: dict, **kwargs) -> dict:
     """
@@ -349,13 +375,9 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     if is_pca:
         # PCA transformations
         print("PCA transformation ...")
-        PCs = min(len(mod2_train), settings["PCs"])
-        pca_mod1 = PCA(n_components=PCs)
-        pca_mod2 =PCA(n_components=PCs)
-        pca_mod1.fit(mod1_train)
-        pca_mod2.fit(mod2_train)
-        mod1_train = pca_mod1.transform(mod1_train)
-        mod2_train = pca_mod2.transform(mod2_train)
+
+        mod1_train, mod2_train, pca_mod1, pca_mod2 = pca_with_nans(mod1_train, mod2_train, settings["PCs"])
+
         print("PCA finished.")
 
     # Arrays to tensors
@@ -368,21 +390,24 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
 
     lbls1 = labels_train[0]
     lbls2 = labels_train[1]
-    num_classes = len(np.unique(lbls1))
+    num_classes = len(np.unique(lbls1))-1
     target = torch.arange(num_classes)
     target = target.to(device)
     imputed_cell_types1 = impute_cells(lbls1)
     imputed_cell_types2 = impute_cells(lbls2)
-    label_indices1 = []
-    for key in imputed_cell_types1.keys():
-        label_indices1.append(imputed_cell_types1[key])
+    #print(imputed_cell_types2)
+    #label_indices1 = []
+    # for key in imputed_cell_types1.keys():
+    #     label_indices1.append(imputed_cell_types1[key])
     
-    label_indices2 = []
-    for key in imputed_cell_types2.keys():
-        label_indices2.append(imputed_cell_types2[key])
+    # label_indices2 = []
+    # for key in imputed_cell_types2.keys():
+    #     label_indices2.append(imputed_cell_types2[key])
     
-    lbls_cycle1 = {ct: cycle(indices) for ct, indices in enumerate(label_indices1)}
-    lbls_cycle2 = {ct: cycle(indices) for ct, indices in enumerate(label_indices2)}
+    # print(label_indices2)
+    
+    lbls_cycle1 = {ct: cycle(indices) for ct, indices in imputed_cell_types1.items()}
+    lbls_cycle2 = {ct: cycle(indices) for ct, indices in imputed_cell_types2.items()}
 
     mod1_encoder = Mod1Encoder(mod1_train_t.shape[1], hidden_dim, latent_dim)
     mod1_encoder.to(device)
@@ -397,7 +422,7 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
         cool.train()
         epoch_loss = 0.0
         total_samples = 0
-        total_batches = len(label_indices2[0])
+        total_batches = len(imputed_cell_types2[0])
 
         for batch in range(0, total_batches, bob):
             mod1_batch = []
@@ -406,14 +431,21 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
             for _ in range(bob):
 
                 for ct in range(num_classes):
-                    mod1_cell = next(lbls_cycle1[ct])
-                    mod2_cell = next(lbls_cycle2[ct])
+                    #print(f"Cell type is: {ct}")
+                    if ct == -1:
+                        continue
+                    else:
+                        mod1_cell = next(lbls_cycle1[ct])
+                        mod2_cell = next(lbls_cycle2[ct])
+                        #print(mod2_cell)
 
-                    mod1_batch.append(mod1_train_t[mod1_cell, :])
-                    mod2_batch.append(mod2_train_t[mod2_cell, :])
+                        mod1_batch.append(mod1_train_t[mod1_cell, :])
+                        mod2_batch.append(mod2_train_t[mod2_cell, :])
                 
             mod1_batch = torch.vstack(mod1_batch)
+            #print(mod1_batch)
             mod2_batch = torch.vstack(mod2_batch)
+            #print(mod2_batch)
 
             logits, _, _ = cool(mod1_batch, mod2_batch)
             block_size = num_classes
