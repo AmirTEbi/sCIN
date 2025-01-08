@@ -63,10 +63,10 @@ def compute_metrics(mod1_embs:np.array, mod2_embs:np.array, labels:np.array):
     recall_at_k[30] = float(kright30)/cell_num
     recall_at_k[40] = float(kright40)/cell_num
     recall_at_k[50] = float(kright50)/cell_num
-    number_of_pairs = float(np.sum(pairlist==ATAC_seq))
+    num_pairs = float(np.sum(pairlist==ATAC_seq))
     cell_type_acc = float(np.sum(labels==classlist)/cell_num)
 
-    return recall_at_k, number_of_pairs, cell_type_acc
+    return recall_at_k, num_pairs, cell_type_acc
 
 
 def assess(mod1_embs, mod2_embs, labels_test, n_pc=10, 
