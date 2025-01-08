@@ -324,8 +324,8 @@ def pca_with_nans(data1, data2, n_components):
     non_nans2 = data2[~nan_mask2]
     #print(non_nans2)
 
-    PCs1 = min(len(non_nans1), n_components)
-    PCs2 = min(len(non_nans2), n_components)
+    PCs1 = min(non_nans1.shape[0], non_nans1.shape[1], n_components)
+    PCs2 = min(non_nans2.shape[0], non_nans2.shape[1], n_components)
     pca1 = PCA(n_components=PCs1)
     pca2 = PCA(n_components=PCs2)
     pca1.fit(non_nans1)
@@ -371,6 +371,8 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     save_dir = kwargs["save_dir"]
     seed = kwargs["seed"]
     is_pca = kwargs["is_pca"]
+    patience = settings.get("patience", 10)
+    min_delta = settings.get("min_delta", 1e-4)
 
     if is_pca:
         # PCA transformations
@@ -395,16 +397,6 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     target = target.to(device)
     imputed_cell_types1 = impute_cells(lbls1)
     imputed_cell_types2 = impute_cells(lbls2)
-    #print(imputed_cell_types2)
-    #label_indices1 = []
-    # for key in imputed_cell_types1.keys():
-    #     label_indices1.append(imputed_cell_types1[key])
-    
-    # label_indices2 = []
-    # for key in imputed_cell_types2.keys():
-    #     label_indices2.append(imputed_cell_types2[key])
-    
-    # print(label_indices2)
     
     lbls_cycle1 = {ct: cycle(indices) for ct, indices in imputed_cell_types1.items()}
     lbls_cycle2 = {ct: cycle(indices) for ct, indices in imputed_cell_types2.items()}
@@ -417,6 +409,8 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     cool.to(device)
     optimizer = Adam(cool.parameters(), lr=lr)
     
+    best_loss = float('inf')
+    patience_counter = 0
     for epoch in range(epochs):
 
         cool.train()
@@ -467,6 +461,15 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
 
         epoch_loss /= total_samples
         print(f"Epoch: {epoch} | Loss: {epoch_loss:.4f}")
+
+        if epoch_loss < best_loss - min_delta:
+            best_loss = epoch_loss
+            patience_counter = 0
+        else:
+            patience_counter += 1
+            if patience_counter >= patience:
+                print(f"Early stopping at epoch {epoch}. Best loss: {best_loss:.4f}")
+                break
 
     model_dir = os.path.join(save_dir, "models")
     if not os.path.exists(model_dir):
