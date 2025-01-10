@@ -16,7 +16,7 @@ from sc_cool.utils.utils import(split_full_data,
                                    make_plots,
                                    make_unpaired,
                                    make_unpaired_random)
-from sc_cool.models.sc_cool import (Mod1Encoder, 
+from sc_cool.models.sCIN import (Mod1Encoder, 
                                     Mod2Encoder, 
                                     scCOOL, 
                                     train_sCIN_unpaired, 
@@ -38,14 +38,14 @@ import os
 def main() -> None:
 
     parser = argparse.ArgumentParser(description='Get config')
-    parser.add_argument("--model_cfg", type=str)
+    parser.add_argument("--cfg_path", type=str)
     parser.add_argument("--data", type=str)
     parser.add_argument("--seed_range", type=int, default=100)
     parser.add_argument("--outfile", type=str)
     parser.add_argument("--quick_test", action='store_true')
     args = parser.parse_args()
 
-    config = read_config(args.model_cfg)
+    config = read_config(args.cfg_path)
 
     ############### Main Setup ###################
     SETTINGS = config["SETTINGS"]
