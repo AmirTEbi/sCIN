@@ -277,7 +277,7 @@ def train_classifier(rna_inputs, atac_inputs, rna_model, atac_model,
 def get_func_name(model_name):
      
      if model_name == "sCIN":
-          return "train_sccool", "get_emb_sCIN"
+          return "train_sCIN", "get_emb_sCIN"
      
      elif model_name == "AE":
           return "train_ae", "get_emb_ae"
