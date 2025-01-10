@@ -69,25 +69,11 @@ def compute_metrics(mod1_embs:np.array, mod2_embs:np.array, labels:np.array):
     return recall_at_k, num_pairs, cell_type_acc
 
 
-def assess(mod1_embs, mod2_embs, labels_test, n_pc=10, 
-           save_dir=None, seed=None):
+def assess(mod1_embs, mod2_embs, labels_test, seed=None):
 
-    # Define jonit embedding and PCA plot
     joint_emb = np.column_stack((mod1_embs, mod2_embs))
-    pca = PCA(n_components=n_pc)
-    joint_emb_pca = pca.fit_transform(joint_emb)
-    cmap = plt.get_cmap('viridis', len(np.unique(labels_test)))
-    plt.figure(figsize=(6, 4))
-    plt.scatter(joint_emb_pca[:, 0], joint_emb[:, 1], c=labels_test, cmap=cmap)
-    plt.title("PCA plot of embeddings for replicate" + "" + str(seed))
-    plt.xlabel("PC 1")
-    plt.ylabel("PC 2")
-    plt.savefig(os.path.join(save_dir, f"rep{seed}.png"))
 
-    # Compute metrics
     recall_at_k, num_pairs, cell_type_acc = compute_metrics(mod2_embs, mod1_embs, labels_test)
-
-    # Compute ASW
-    asw = (silhouette_score(joint_emb, labels_test) + 1) / 2
+    asw = (silhouette_score(joint_emb, labels_test, random_state=seed) + 1) / 2
 
     return recall_at_k, num_pairs, cell_type_acc, asw
