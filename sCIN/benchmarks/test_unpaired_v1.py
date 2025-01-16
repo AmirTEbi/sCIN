@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from sc_cool.utils.utils import (split_full_data,
+from sCIN.utils.utils import (split_full_data,
                                    split_partial_data,
                                    extract_counts, 
                                    get_func_name, 
@@ -16,7 +16,7 @@ from sc_cool.utils.utils import (split_full_data,
                                    make_plots,
                                    make_unpaired_v3)  ###
 
-from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_sCIN_unpaired, get_emb_sCIN)
+from sCIN.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_sCIN_unpaired, get_emb_sCIN, pca_with_nans)
 #from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
 
 # from sc_cool.models.AE import (Mod1Encoder, 
@@ -27,7 +27,7 @@ from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_sCIN
 #                                train_ae, 
 #                                get_emb_ae)
 
-from sc_cool.benchmarks.assess import (compute_metrics, assess)
+from sCIN.benchmarks.assess import (compute_metrics, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA

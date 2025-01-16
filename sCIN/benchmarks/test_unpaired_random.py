@@ -1,8 +1,7 @@
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from sc_cool.utils.utils import (split_full_data,
-                                   split_partial_data,
+from sCIN.utils.utils import (split_full_data,
                                    extract_counts, 
                                    get_func_name, 
                                    read_config, 
@@ -14,12 +13,15 @@ from sc_cool.utils.utils import (split_full_data,
                                    train_autoencoders, 
                                    train_classifier, 
                                    make_plots,
-                                   make_unpaired_v4)  ###
+                                   random_shuffle)
 
-from sc_cool.models.sc_cool import (Mod1Encoder, Mod2Encoder, scCOOL, train_sCIN_unpaired, get_emb_sCIN)
-from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
+from sCIN.models.sc_cool import (Mod1Encoder, 
+                                      Mod2Encoder, 
+                                      scCOOL, train_sccool, 
+                                      get_emb_sCIN)
+from sCIN.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
 
-from sc_cool.models.AE import (Mod1Encoder, 
+from sCIN.models.AE import (Mod1Encoder, 
                                Mod2Encoder, 
                                Mod1Decoder, 
                                Mod2Decoder,
@@ -27,7 +29,7 @@ from sc_cool.models.AE import (Mod1Encoder,
                                train_ae, 
                                get_emb_ae)
 
-from sc_cool.benchmarks.assess import (compute_metrics, assess)
+from sCIN.benchmarks.assess import (ct_recall, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
@@ -72,7 +74,7 @@ def main():
         settings = config["SETTINGS"][model_name]
 
         train_func_name, get_emb_func_name = get_func_name(model_name)
-        train_func = train_sCIN_unpaired
+        train_func = globals().get(train_func_name)
         get_emb_func = globals().get(get_emb_func_name)
 
         print(f"Experiment for model {model_name} has been started!")
@@ -83,7 +85,6 @@ def main():
             epochs = 1
         else:
             epochs = settings["EPOCHS"]
-        print(f"Epochs is: {epochs}")
         #############
 
         for seed in seeds:
@@ -92,48 +93,40 @@ def main():
             # To save the results for the current replication
             results_rep_df = pd.DataFrame(columns=["Models", "Replicates", "k", "Recall_at_k", "num_pairs", 
                                                    "cell_type_acc", "cell_type_ASW"])                
-
-    
+                
             rna_train, rna_test, atac_train, atac_test, \
-            labels_train, labels_test = split_full_data(mod1, mod2, seed=seed)
+                    labels_train, labels_test = split_full_data(mod1, mod2, seed=seed)
+            
+
+            # Randomly shuffle cells in training data
+            atac_train_shuffled = random_shuffle(atac_train, seed=seed)
 
             print(rna_train.shape)
-            print(atac_train.shape)
+            print(atac_train_shuffled.shape)
+            print(rna_test.shape)
+            print(atac_test.shape)
             
             print("Data splitted!")
-
-            mod1_train_unpaired, lbls_unpaired1, mod2_train_unpaired, lbls_unpaired2 = make_unpaired_v4(rna_train, atac_train,labels_train,seed=seed)
-            print(f"Shape of the Mod1 training data: {mod1_train_unpaired.shape}")
-            print(f"Shape of the Mod2 training data: {mod2_train_unpaired.shape}")
-            print(f"Shape of the Mod1 training labels: {lbls_unpaired1.shape}")
-            print(f"Shape of the Mod2 training labels: {lbls_unpaired2.shape}")
-
-            #break
-
             print(f"Training has been started!")
             TrainTime0 = time.time()
 
-            train_dict = train_func(mod1_train_unpaired, mod2_train_unpaired, [lbls_unpaired1, lbls_unpaired2], epochs=epochs, 
-                                  settings=settings, seed=seed, save_dir=config["SAVE_DIRS"][model_name],
-                                  is_pca=True)
+            obj_list = train_func(rna_train, atac_train_shuffled, labels_train, epochs=epochs, 
+                                  settings=settings, device=device, seed=seed)
             
             TrainTime1 = time.time()
             print(f"Total training time for model {model_name}: {(TrainTime1 - TrainTime0)/60} minutes.")
             print("Training has been ended!")
 
             # Get embeddings
-            mod1_embs, mod2_embs = get_emb_func(rna_test, atac_test, labels_test, train_dict, 
-                                                save_dir=config["SAVE_DIRS"][model_name], seed=seed,
-                                                is_pca=True)
-
-            print(f"Shape of Mod1 embeddings: {mod1_embs.shape}")
-            print(f"Shape of Mod2 embeddings: {mod2_embs.shape}")
+            rna_emb, atac_emb = get_emb_func(rna_test, atac_test, labels_test, obj_list, save_dir=config["SAVE_DIRS"][model_name], seed=seed, device=device)
+            print(f"Shape of RNA embeddings: {rna_emb.shape}")
+            print(f"Shape of ATAC embeddings: {atac_emb.shape}")
             print(f"Embeddings for model {model_name} were generated!")
 
             # Assessment
             print("Assessment has been started!")
-            recall_at_k, num_pairs, cell_type_acc, asw = assess(mod1_embs, mod2_embs, labels_test, n_pc=20,
-                                            save_dir=config["SAVE_DIRS"][model_name], seed=seed)
+            recall_at_k, num_pairs, class_lbl_acc, asw = assess(rna_emb, atac_emb, labels_test, n_pc=20,
+                                            save_path=config["SAVE_DIRS"][model_name], seed=seed)
             print(type(recall_at_k))
             print("Assessment completed!")
 
@@ -144,7 +137,7 @@ def main():
                     "k": k,
                     "Recall_at_k": [v],
                     "num_pairs": [num_pairs],
-                    "cell_type_acc":[cell_type_acc],
+                    "cell_type_acc":[class_lbl_acc],
                     "cell_type_ASW":asw
                 })
 
@@ -159,12 +152,10 @@ def main():
             print(f"Experiment for model {model_name} has been finished!")
 
     experiment = config["EXPERIMENT_NAME"]
-    results_df.to_csv(os.path.join(config["SAVE_DIRS"]["EXP"], 
-                                   f"results_{experiment}.csv"), 
-                                   index=False)
+    results_df.to_csv(config["SAVE_DIRS"]["EXP"] + f"/results_{experiment}.csv", index=False)
     make_plots(results_df, config["SAVE_DIRS"]["EXP"])
 
-    print("All experiments are finished!")
+    print("All experiments has been finished!")
 
 if __name__ == "__main__":
     main()

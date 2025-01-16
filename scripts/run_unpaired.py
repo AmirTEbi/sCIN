@@ -10,19 +10,19 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import anndata as ad
-from sc_cool.utils.utils import(split_full_data,
+from sCIN.utils.utils import(split_full_data,
                                    extract_counts, 
                                    read_config, 
                                    make_plots,
                                    make_unpaired,
                                    make_unpaired_random)
-from sc_cool.models.sCIN import (Mod1Encoder, 
+from sCIN.models.sCIN import (Mod1Encoder, 
                                     Mod2Encoder, 
                                     scCOOL, 
                                     train_sCIN_unpaired, 
                                     get_emb_sCIN, 
                                     pca_with_nans)
-from sc_cool.benchmarks.assess import (compute_metrics, assess)
+from sCIN.benchmarks.assess import (compute_metrics, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
@@ -35,12 +35,24 @@ import time
 import argparse
 import os
 
+
+def seed_values_type(value):
+
+    try:
+        return(int(value))
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"Invalid value for --seed_values: {value}. Must be an integer.")
+
 def main() -> None:
 
-    parser = argparse.ArgumentParser(description='Get config')
+    parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_path", type=str)
     parser.add_argument("--data", type=str)
-    parser.add_argument("--seed_range", type=int, default=100)
+    parser.add_argument("--seed_range", action="store_true")
+    parser.add_argument("--seed_start", type=int, default=0)
+    parser.add_argument("--seed_step", type=int, default=10)
+    parser.add_argument("--seed_end", type=int, default=100)
+    parser.add_argument("--seed_values", type=seed_values_type, nargs='*')
     parser.add_argument("--outfile", type=str)
     parser.add_argument("--quick_test", action='store_true')
     args = parser.parse_args()
@@ -52,11 +64,15 @@ def main() -> None:
     BASE_SAVE_DIR = f"results/{args.data}/main_unpaired"
     os.makedirs(BASE_SAVE_DIR, exist_ok=True)
 
+    if args.seed_range:
+        seeds = [np.arange(args.seed_start, args.seed_end,
+                               args.seed_step)]
+    else:
+        seeds = [int(seed) for seed in args.seed_values]
     
-    seeds = list(np.arange(0, args.seed_range, 10))
     print(f"Seeds are: {seeds}")
 
-    p_list = ("Random", 0.01, 0.05, 0.1, 0.2, 0.5)
+    props = ("Random", 0.01, 0.05, 0.1, 0.2, 0.5)
 
     epochs = 1 if args.quick_test else SETTINGS.get("EPOCHS", 150)
     print(f"Epochs: {epochs}")
@@ -81,7 +97,7 @@ def main() -> None:
     for seed in seeds:
         print(f"Current seed: {seed}")
 
-        save_dir_seed = os.path.join(BASE_SAVE_DIR, f"rep{seed}")
+        save_dir_seed = os.path.join(BASE_SAVE_DIR, f"rep{(seed/10) + 1}")
         os.makedirs(save_dir_seed, exist_ok=True)
         
         RepTime0 = time.time()
@@ -90,7 +106,7 @@ def main() -> None:
             labels_train, labels_test = split_full_data(mod1, mod2, seed=seed)
         print("Data splitted!")
 
-        for i in p_list:
+        for i in props:
             print(f"Current p: {i}")
             model_name = f"sCIN_{i}" if i != "Random" else "sCIN_Random"
             save_dir_p = os.path.join(save_dir_seed, 
@@ -121,28 +137,28 @@ def main() -> None:
                                                 save_dir=save_dir_p, seed=seed,
                                                 is_pca=True)
             
+            # From mod2 -> mod1
             recall_at_k, num_pairs, cell_type_acc, asw = assess(mod1_embs, mod2_embs, 
-                                                                labels_test, n_pc=20, 
-                                                                save_dir=save_dir_p, 
-                                                                seed=seed)
-            recall_at_k_2to1, num_pairs_2to1, cell_type_acc_2to1 = compute_metrics(mod2_embs,
-                                                                                   mod1_embs, 
+                                                                labels_test, seed=seed)
+            # From mod1 -> mod2
+            recall_at_k_1to2, num_pairs_1to2, cell_type_acc_1to2 = compute_metrics(mod1_embs,
+                                                                                   mod2_embs, 
                                                                                    labels_test)
 
 
             for k, v1 in recall_at_k.items():
-                v2 = recall_at_k_2to1.get(k, 0)
+                v2 = recall_at_k_1to2.get(k, 0)
                 new_row = pd.DataFrame({
                     "Models": [model_name],
-                    "Replicates": [seeds.index(seed) + 1],
+                    "Replicates": [(seed/10) + 1],
                     "k": [k],
                     "Mod2_prop": [i],
                     "Recall_at_k": [v1],
-                    "Recall_at_k_2to1": [v2],
+                    "Recall_at_k_1to2": [v2],
                     "num_pairs": [num_pairs],
-                    "num_pairs_2to1": [num_pairs_2to1],
+                    "num_pairs_1to2": [num_pairs_1to2],
                     "cell_type_acc": [cell_type_acc],
-                    "cell_type_acc_2to1": [cell_type_acc_2to1],
+                    "cell_type_acc_1to2": [cell_type_acc_1to2],
                     "cell_type_ASW": [asw]})
 
                 results_df = pd.concat([results_df, new_row], ignore_index=True)

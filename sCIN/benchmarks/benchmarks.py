@@ -23,8 +23,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sc_cool.data_processing.plots import plot_recall_at_k, plot_MedR, plot_cell_type_accuracy, plot_asw
-from sc_cool.benchmarks.assess import compute_metrics
+from sCIN.data_processing.plots import plot_recall_at_k, plot_MedR, plot_cell_type_accuracy, plot_asw
+from sCIN.benchmarks.assess import compute_metrics
 import argparse
 import os
 

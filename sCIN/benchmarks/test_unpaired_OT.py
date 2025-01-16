@@ -7,7 +7,7 @@ Date: 2024-12-17
 import numpy as np
 import pandas as pd
 import scanpy as sc
-from sc_cool.utils.utils import (split_full_data,
+from sCIN.utils.utils import (split_full_data,
                                    extract_counts, 
                                    get_func_name, 
                                    read_config, 
@@ -22,15 +22,15 @@ from sc_cool.utils.utils import (split_full_data,
                                    remove_rows,
                                    make_extreme_unpaired)
 
-from sc_cool.models.sc_cool import (Mod1Encoder, 
+from sCIN.models.sc_cool import (Mod1Encoder, 
                                       Mod2Encoder, 
                                       scCOOL, train_sccool, 
                                       train_static_bob,
                                       train_dynamic_bob,
-                                      get_emb_sccool)
-from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
+                                      get_emb_sCIN)
+from sCIN.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
 
-from sc_cool.models.AE import (Mod1Encoder, 
+from sCIN.models.AE import (Mod1Encoder, 
                                Mod2Encoder, 
                                Mod1Decoder, 
                                Mod2Decoder,
@@ -38,7 +38,7 @@ from sc_cool.models.AE import (Mod1Encoder,
                                train_ae, 
                                get_emb_ae)
 
-from sc_cool.benchmarks.assess import (compute_metrics, assess)
+from sCIN.benchmarks.assess import (compute_metrics, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA

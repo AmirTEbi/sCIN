@@ -7,7 +7,10 @@ import os
 import argparse
 
 
-def make_palette(models:list, colors:list) -> dict:
+def make_palette(models:list, colors:list, legend_order: list = None) -> dict:
+
+    if legend_order:
+        models = [model for model in legend_order if model in models]
 
     return {model: color for model, color in zip(models, colors)}
 
@@ -17,7 +20,7 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
     
     inverse = kwargs.get("inverse", False)
     if inverse:
-        grouped_df = df.groupby(["Models", "k"])["Recall_at_k_2to1"].agg(["mean", "std"]).reset_index()
+        grouped_df = df.groupby(["Models", "k"])["Recall_at_k_inv"].agg(["mean", "std"]).reset_index()
     else:
         grouped_df = df.groupby(["Models", "k"])["Recall_at_k"].agg(["mean", "std"]).reset_index()
     
@@ -38,49 +41,28 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
 
     legend_handles = [
         Line2D(
-            [0], [0], color=colors[model], linewidth=2, 
+            [0], [0], color=colors[model], linewidth=4, 
             label=legend_names.get(model, model)  
         ) for model in grouped_df['Models'].unique()
     ]
     plt.legend(
-        handles=legend_handles, title="", fontsize=10, loc='center left', bbox_to_anchor=(1, 0.5)
+        handles=legend_handles, title="", 
+        fontsize=10, loc='center left', bbox_to_anchor=(1, 0.5),
+        frameon=False
     )
 
-    plt.xlabel("k", fontsize=10)
-    plt.ylabel("Recall@k", fontsize=10)
+    plt.xlabel("k", fontsize=12)
+    plt.ylabel("Recall@k", fontsize=12)
     xticks_positions = [10, 20, 30, 40, 50]
-    plt.xticks(xticks_positions, labels=xticks_positions, fontsize=10)
-    plt.yticks(fontsize=10)
+    plt.xticks(xticks_positions, labels=xticks_positions, fontsize=12)
+    plt.yticks(fontsize=12)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"Fig5_a.{file_type}")
+    out = os.path.join(save_dir, f"unpaired_ratk_inv.{file_type}")
     plt.savefig(out)
-
-
-# def plot_asw_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
-#                xticks=None) -> None:
-
-#     plt.figure(figsize=(6, 4))
-#     ax = plt.gca()
-#     ax = sns.boxplot(x="Models", y="cell_type_ASW", data=df, palette=colors)
-
-#     plt.xlabel("")
-#     plt.ylabel("ASW", fontsize=10)
-#     if xticks:
-#         plt.xticks(xticks['positions'], xticks['labels'], rotation=45, fontsize=10)
-#     else:
-#         plt.xticks(rotation=45, fontsize=10)
-#     plt.yticks(fontsize=10)
-
-#     ax.spines['top'].set_visible(False)
-#     ax.spines['right'].set_visible(False)
-
-#     plt.tight_layout()
-#     out = os.path.join(save_dir, f"fig5_b.{file_type}")
-#     plt.savefig(out)
 
     
 def plot_ct_acc_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png", 
@@ -91,23 +73,27 @@ def plot_ct_acc_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
 
     inverse = kwargs.get("inverse", False)
     if inverse:
-        ax = sns.boxplot(x="Models", y="cell_type_acc_2to1", data=df, palette=colors)
+        order = df.groupby("Models")["cell_type_acc_inv"].mean().sort_values().index
+        ax = sns.boxplot(x="Models", y="cell_type_acc_inv", data=df, palette=colors,
+                         order=order)
     else:
-        ax = sns.boxplot(x="Models", y="cell_type_acc", data=df, palette=colors)
+        order = df.groupby("Models")["cell_type_acc"].mean().sort_values().index
+        ax = sns.boxplot(x="Models", y="cell_type_acc", data=df, palette=colors,
+                         order=order)
 
     plt.xlabel("")
-    plt.ylabel("Cell Type Accuracy", fontsize=10)
+    plt.ylabel("Cell Type Accuracy", fontsize=12)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=10)
+        plt.xticks(xticks["positions"], xticks['labels'], fontsize=12)
     else:
-        plt.xticks(fontsize=10)
-    plt.yticks(fontsize=10)
+        plt.xticks(fontsize=12)
+    plt.yticks(fontsize=12)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"fig5_c.{file_type}")
+    out = os.path.join(save_dir, f"unpaired_ct_acc_inv.{file_type}")
     plt.savefig(out)
 
 
@@ -124,11 +110,11 @@ def main() -> None:
               "#fb9a99", "#e31a1c", "#fdbf6f"]
     legend = {
         "sCIN_Random":"Random",
-        "sCIN_0.01":"1%",
-        "sCIN_0.05":"5%",
-        "sCIN_0.1":"10%",
-        "sCIN_0.2":"20%",
-        "sCIN_0.5":"50%",
+        "sCIN_1":"1%",
+        "sCIN_5":"5%",
+        "sCIN_10":"10%",
+        "sCIN_20":"20%",
+        "sCIN_50":"50%",
         "paired":"Paired"
     }
 
@@ -139,19 +125,15 @@ def main() -> None:
 
     df = pd.read_csv(args.path)
     models = df["Models"].unique().tolist()
-    colors = make_palette(models, colors)
+    colors = make_palette(models, colors, legend_order=list(legend.keys()))
 
     if args.all:
-        plot_ratk_5(df, colors, args.save_dir, file_type="pdf", legend_names=legend)
-        #plot_asw_8(df, colors, args.save_dir, file_type="pdf", xticks=xticks)
-        plot_ct_acc_5(df, colors, args.save_dir, file_type="pdf", xticks=xticks)
+        plot_ratk_5(df, colors, args.save_dir, file_type="pdf", legend_names=legend, inverse=True)
+        plot_ct_acc_5(df, colors, args.save_dir, file_type="pdf", xticks=xticks, inverse=True)
 
     else:
         if args.metric == "r_at_k":
             plot_ratk_5(df, colors, args.save_dir, file_type="pdf", legend_names=legend)
-
-        #elif args.metric == "ASW":
-            #plot_asw_5(df, colors, args.save_dir, file_type="pdf", xticks=xticks)
         
         elif args.metric == "ct_acc":
             plot_ct_acc_5(df, colors, args.save_dir, file_type="pdf",xticks=xticks)

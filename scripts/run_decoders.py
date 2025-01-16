@@ -10,18 +10,18 @@ import numpy as np
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from typing import Dict, Tuple
-from sc_cool.models.decoders import (GEXDecoder, 
+from sCIN.models.decoders import (GEXDecoder, 
                                      train_val_gex_decoder, 
                                      list_embs, get_gt, 
                                      get_search_space, 
                                      hyperparam_opt )
-from sc_cool.utils.utils import read_config
+from sCIN.utils.utils import read_config
 import argparse
 from typing import Dict, Tuple, List
 import traceback
 
 
-def main():
+def main() -> None:
 
     DEFAULT_DATASETS = ["SHARE", "PBMC", "CITE"]
 
@@ -29,9 +29,9 @@ def main():
     parser.add_argument("--hyperparam_opt", action="store_true", help="Run hyperparameter optimization")
     parser.add_argument("--model", type=str, help="Name of the model")
     parser.add_argument("--save_dir", type=str, help="Save directory")
-    parser.add_argument(
-        "--datasets", type=str, nargs="+", default=DEFAULT_DATASETS,
-        help=f"List of datasets for optimization. Default: {DEFAULT_DATASETS}.")
+    # parser.add_argument(
+    #     "--datasets", type=str, nargs="+", default=DEFAULT_DATASETS,
+    #     help=f"List of datasets for optimization. Default: {DEFAULT_DATASETS}.")
     
     args = parser.parse_args()
 
@@ -40,10 +40,15 @@ def main():
         if not os.path.exists(args.save_dir):
             os.makedirs(args.save_dir, exist_ok=True)
 
+        share = ad.read_h5ad("data/share/Ma-2020-RNA.h5ad")
+        pbmc = ad.read_h5ad("data/10x/10x-Multiome-Pbmc10k-RNA.h5ad")
+        cite = ad.read_h5ad("data/cite/rna.h5ad")
+        datasets = [share, pbmc, cite]
+
         hyperparam_opt(
             model=args.model,
             save_dir=args.save_dir,
-            datasets=args.datasets,
+            datasets=datasets,
         )
         print("Hyperparameter optimization completed.")
 

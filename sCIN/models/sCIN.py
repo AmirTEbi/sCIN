@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 from sklearn.decomposition import PCA
-from sc_cool.utils.utils import impute_cells
+from sCIN.utils.utils import impute_cells
 from itertools import cycle
 import os
 

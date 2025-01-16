@@ -2,30 +2,30 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import anndata as ad
-from sc_cool.utils.utils import(split_full_data,
+from sCIN.utils.utils import(split_full_data,
                                 extract_counts, 
                                 read_config, 
                                 make_plots,
                                 get_func_name)
-from sc_cool.models.sCIN import (Mod1Encoder, 
+from sCIN.models.sCIN import (Mod1Encoder, 
                                  Mod2Encoder, 
                                 scCOOL, 
                                 train_sCIN, 
                                 get_emb_sCIN)
-from sc_cool.models.AE import (Mod1Encoder, 
+from sCIN.models.AE import (Mod1Encoder, 
                                Mod2Encoder, 
                                Mod1Decoder, 
                                Mod2Decoder,
                                SimpleAutoEncoder, 
                                train_ae, 
                                get_emb_ae) 
-from sc_cool.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
-from sc_cool.models.harmony import (train_hm, get_emb_hm)
-from sc_cool.models.mofa import (prepare_data_mofa, 
+from sCIN.models.ConAAE.con_aae import (setup_args, train_con, get_emb_con)
+from sCIN.models.harmony import (train_hm, get_emb_hm)
+from sCIN.models.mofa import (prepare_data_mofa, 
                                 extract_embs, 
                                 train_mofa, 
                                 get_mofa_emb)
-from sc_cool.benchmarks.assess import (compute_metrics, assess)
+from sCIN.benchmarks.assess import (compute_metrics, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
@@ -57,7 +57,8 @@ def main() -> None:
     config = read_config(args.cfg_path)
     SETTINGS = config["SETTINGS"]
     BASE_SAVE_DIR = f"results/{args.data}/{args.model}/V1"
-    seeds = list(np.arange(0, args.seed_range, 10))
+    #seeds = list(np.arange(0, args.seed_range, 10))
+    seeds = [90]
     epochs = 1 if args.quick_test else SETTINGS.get("EPOCHS")
 
     mod1_path, mod2_path = DATA[args.data]
@@ -73,7 +74,7 @@ def main() -> None:
     if args.model == "all":
         models = MODELS
     else:
-        models = (args.model)
+        models = [args.model]
     
     start_pipeline_time = time.time()
     train_times = {model:0.0 for model in models}
@@ -85,7 +86,8 @@ def main() -> None:
 
         start_rep_time = time.time()
         for seed in seeds:
-            save_dir_seed = os.path.join(BASE_SAVE_DIR, f"rep{seeds.index(seed) + 1}")
+            print(f"Seed is {seed}")
+            save_dir_seed = os.path.join(BASE_SAVE_DIR, f"rep{int(seed/10 + 1)}")
             os.makedirs(save_dir_seed, exist_ok=True)
 
             mod1_train, mod1_test, mod2_train, mod2_test, \
@@ -96,7 +98,7 @@ def main() -> None:
             print("Training has been started ...")
             train_dict = train_func(mod1_train, mod2_train, labels_train,
                                     epochs=epochs, settings=SETTINGS,
-                                    seed=seed, is_pca=True)
+                                    seed=seed, is_pca=True, save_dir=save_dir_seed)
             end_train_time = time.time()
             train_time = (end_train_time - start_train_time)/60
             train_times[model] += train_time
@@ -106,11 +108,9 @@ def main() -> None:
                                                 train_dict, save_dir_seed,
                                                 seed=seed, is_pca=True)
             recall_at_k, num_pairs, cell_type_acc, asw = assess(mod1_embs, mod2_embs, 
-                                                                labels_test, n_pc=20, 
-                                                                save_dir=save_dir_seed, 
-                                                                seed=seed)
-            recall_at_k_2to1, num_pairs_2to1, cell_type_acc_2to1 = compute_metrics(mod2_embs,
-                                                                                   mod1_embs, 
+                                                                labels_test, seed=seed)
+            recall_at_k_2to1, num_pairs_2to1, cell_type_acc_2to1 = compute_metrics(mod1_embs,
+                                                                                   mod2_embs, 
                                                                                    labels_test)
             
             end_rep_time = time.time()

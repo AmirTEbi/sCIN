@@ -3,7 +3,7 @@ from sklearn.metrics import silhouette_score
 from sklearn.decomposition import PCA
 from sklearn.neighbors import KDTree
 import matplotlib.pyplot as plt 
-from sc_cool.models.ConAAE.conAAE import mink
+from sCIN.models.ConAAE.conAAE import mink
 from typing import Dict, List
 import os
 

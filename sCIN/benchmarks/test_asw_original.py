@@ -12,7 +12,7 @@ import colorcet as cc
 import os
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
-from sc_cool.utils.utils import load_data
+from sCIN.utils.utils import load_data
 from sklearn.metrics import silhouette_score
 import argparse
 

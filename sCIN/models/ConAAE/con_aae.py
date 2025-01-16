@@ -4,10 +4,10 @@ import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.autograd import Variable
-from sc_cool.models.ConAAE.model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
-from sc_cool.models.ConAAE.conAAE import conAAE
+from sCIN.models.ConAAE.model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
+from sCIN.models.ConAAE.conAAE import conAAE
 from sklearn.decomposition import PCA
-from sc_cool.utils.utils import shuffle_per_cell_type
+from sCIN.utils.utils import shuffle_per_cell_type
 import os
 import argparse
 import time

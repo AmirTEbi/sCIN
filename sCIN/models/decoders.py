@@ -11,6 +11,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from sklearn.model_selection import train_test_split
 from typing import Dict, Tuple, List
 import traceback
+import re
 
 
 class GEXDecoder(nn.Module):
@@ -58,19 +59,13 @@ def list_embs(dir: str) -> Tuple:
             for i in range(0, 100, 10)]
 
 
-def get_gt(path: str, seed: int) -> np.array:
-
-    adata = ad.read_h5ad(path)
-    
-    counts = adata.layers["norm_layer_counts"]
-    _, gt = train_test_split(counts, test_size=0.3, random_state=seed)
-
-    return gt
-
-
 def train_val_gex_decoder(config: Dict, data: str, model: str,
                       save_dir) -> None:
     
+    
+    print(f"Data: {data}")
+    print("Current working directory:", os.getcwd())
+    epochs = 150
     num_layers = config["num_layers"]
     hidden_dims = config["hidden_dims"]
     out_poisson = config["out_poisson"]
@@ -79,7 +74,6 @@ def train_val_gex_decoder(config: Dict, data: str, model: str,
     dropout = config["dropout"]
     learning_rate = config["learning_rate"]
     batch_size = config["batch_size"]
-    epochs = config["epochs"]
     is_checkpoints = config["is_checkpoints"]
 
     checkpoint_dir = os.path.join(save_dir, "checkpoints")
@@ -87,20 +81,32 @@ def train_val_gex_decoder(config: Dict, data: str, model: str,
     best_model_path = os.path.join(checkpoint_dir, "best_model.pt")
     os.makedirs(os.path.join(save_dir, "test_data"), exist_ok=True)
 
-    if data == "SHARE":
-        mod2_embs = list_embs(os.path.join("results", data, model, "embs"))
-        gt = get_gt("data/share/Ma-2020-RNA.h5ad", seed=42)
-    elif data == "PBMC":
-        mod2_embs = list_embs(os.path.join("results", data, model, "embs"))
-        gt = get_gt("data/10x/10x-Multiome-Pbmc10k-RNA.h5ad", seed=42)
-    elif data == "CITE":
-        mod2_embs = list_embs(os.path.join("results", data, model, "embs"))
-        gt = get_gt("data/cite/rna.h5ad", seed=42)
 
+    if data == "SHARE":
+        mod2_embs = list_embs(os.path.join("results", data.lower(), model, "embs"))
+        print(os.path.exists("./data/share/Ma-2020-RNA.h5ad"))
+        adata = ad.read_h5ad("./data/share/Ma-2020-RNA.h5ad")
+        counts = adata.layers["norm_layer_counts"]
+    elif data == "PBMC":
+        mod2_embs = list_embs(os.path.join("results", "10x", model, "embs"))
+        adata = ad.read_h5ad("./data/10x/10x-Multiome-Pbmc10k-RNA.h5ad")
+        counts = adata.layers["norm_layer_counts"]
+    elif data == "CITE":
+        mod2_embs = list_embs(os.path.join("results", data.lower(), model, "embs"))
+        adata = ad.read_h5ad("./data/cite/rna.h5ad")
+        counts = adata.layers["norm_layer_counts"]
 
     for path in enumerate(mod2_embs):
         emb2 = np.load(path)
         in_dim = emb2.shape[1]
+        f = os.path.basename(path)
+        match = re.search(r'atac_emb(\+d)', f)
+        if match:
+            seed = int(match.group(1))
+            print(f"Seed: {seed}")
+        
+        _, gt = train_test_split(counts, test_size=0.3, random_state=seed)  # gt := ground truth
+
         out_dim = gt.shape[1]
         print(f"Shape of the Second moality embeddings: {emb2.shape}")
         print(f"Shape of the GEX ground truth: {gt.shape}")
