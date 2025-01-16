@@ -18,8 +18,8 @@ Documentation/
 .AppleDouble
 .LSOverride
 
-.docx
-.bib
+*.docx
+*.bib
 # Icon must end with two \r
 Icon
 
