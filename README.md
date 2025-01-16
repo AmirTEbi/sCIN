@@ -1,7 +1,3 @@
-## Single-cell Contrastive Omics for Optimized Learning
+## Single-cell Contrastive INtegration (sCIN)
 
-
-- test_unpaired_OT.py for all datasets for scCOOL, AE, and Con-AAE
-
-To Dos:
-
+sCIN is a neural network framework inspired by CLIP (Radford **et al**.(2022)) for single-cell multi-omics data integration.
