@@ -20,7 +20,6 @@ To benchamrk your framework against models in this work (or any models in genera
 - `epochs`: Number of training epochs
 - `settings`: Any additional model's parameters and hyperparamters which can be provided via a config file (examples are in `configs/sCIN`).
 
-These arguments are minimal and your training wrapper can accept more arguments if needed.
 `train_YourMoelName()` returns trained model object. For instance, in PyTorch a neural network can be defined as class inherting from `torch.nn.Module`. You can make an instance of this class for training which can be saved and returned.
 
 `get_emb_YouModelName` produces separate embeddings from test datasets for each modality and its arguments are as follows:
