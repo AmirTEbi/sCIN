@@ -14,5 +14,6 @@ git clone https://github.com/AmirTEbi/sCIN.git
 ```
 Then:
 ```
-poetry install 
+poetry install sCIN
 ```
+Note that you should have `poetry` installed. 
