@@ -79,10 +79,10 @@ class Mod2Encoder(nn.Module):
 
         return z_mod2
     
-class scCOOL(nn.Module):
+class sCIN(nn.Module):
     """ Contrastive learning model inspired by CLIP"""
     def __init__(self, mod1_encoder, mod2_encoder, t): 
-        super(scCOOL, self).__init__()
+        super(sCIN, self).__init__()
         
         self.mod1_encoder = mod1_encoder
         self.mod2_encoder = mod2_encoder
@@ -168,7 +168,7 @@ def train_sCIN(mod1_train: np.array, mod2_train: np.array,
     mod1_encoder.to(device)
     mod2_encoder = Mod2Encoder(mod2_train_t.shape[1], hidden_dim, latent_dim)
     mod2_encoder.to(device)
-    cool = scCOOL(mod1_encoder, mod2_encoder, t)
+    cool = sCIN(mod1_encoder, mod2_encoder, t)
     cool.to(device)
     optimizer = Adam(cool.parameters(), lr=lr)
 
@@ -325,7 +325,7 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     mod1_encoder.to(device)
     mod2_encoder = Mod2Encoder(mod2_train_t.shape[1], hidden_dim, latent_dim)
     mod2_encoder.to(device)
-    cool = scCOOL(mod1_encoder, mod2_encoder, t)
+    cool = sCIN(mod1_encoder, mod2_encoder, t)
     cool.to(device)
     optimizer = Adam(cool.parameters(), lr=lr)
     

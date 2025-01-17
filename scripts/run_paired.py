@@ -9,7 +9,7 @@ from sCIN.utils.utils import(split_full_data,
                                 get_func_name)
 from sCIN.models.sCIN import (Mod1Encoder, 
                                  Mod2Encoder, 
-                                scCOOL, 
+                                sCIN, 
                                 train_sCIN, 
                                 get_emb_sCIN)
 from sCIN.models.AE import (Mod1Encoder, 

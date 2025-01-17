@@ -18,7 +18,7 @@ from sCIN.utils.utils import(split_full_data,
                                    make_unpaired_random)
 from sCIN.models.sCIN import (Mod1Encoder, 
                                     Mod2Encoder, 
-                                    scCOOL, 
+                                    sCIN, 
                                     train_sCIN_unpaired, 
                                     get_emb_sCIN, 
                                     pca_with_nans)
