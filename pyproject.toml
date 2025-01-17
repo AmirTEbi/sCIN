@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "sc-cool"
+name = "sCIN"
 version = "0.1.0"
-description = ""
+description = "This is a dependency file for sCIN project."
 authors = ["Amir Ebrhaimi <amir.ebrahimi01@ut.ac.ir>"]
 
 [tool.poetry.dependencies]

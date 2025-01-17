@@ -8,3 +8,11 @@ Paper: add later
 
 ## Installation
 
+To install `sCIN`, first clone the repository by runnin the following command in terminal:
+```
+git clone https://github.com/AmirTEbi/sCIN.git
+```
+Then:
+```
+poetry install 
+```
