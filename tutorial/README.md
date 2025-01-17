@@ -1,3 +1,5 @@
+# Tutorial
+
 To benchamrk your framework against models in this work (or any models in general), you can use our approach, writting two wrapper functions `train_YourMoelName()` and `get_emb_YouModelName` to prevent data leakage during training. Obviously, your data should be train/test splitted before calling `train_YourMoelName()`.
 
 `train_YourMoelName()` is responsible for training the model and get arguments such as:
@@ -29,3 +31,5 @@ It does not an obligation that `get_emb_YouModelName` returns two separate embed
 These arguments are minimal and feel free to add more if needed. You can see the examples of these functions in `sCIN/models`.
 
 Moreover, you can define an `assess` function for all evaluations on embeddings (example is in `sCIN/benchmarks/assess.py`).
+
+to see how to use sCIN for paired and unpaired multi-omics integration please refer to `demo.ipynb`.
