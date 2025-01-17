@@ -20,6 +20,8 @@ Documentation/
 
 *.docx
 *.bib
+*.ipynb
+notebooks/
 # Icon must end with two \r
 Icon
 
