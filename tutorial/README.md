@@ -27,7 +27,7 @@ To benchamrk your framework against models in this work (or any models in genera
 - `labels_test`: Test labels. If your model does not use labels during training, feel free to set this to `None`.
 - `trained_model`: The trained model object.
 
-It does not an obligation that `get_emb_YouModelName` returns two separate embeddings, though it is important that the training and evaluations be separated. If you want to do evaluations based on metrics used in this work, then it is necessaray to have separate embeddings for each modality.
+It is not an obligation that `get_emb_YouModelName` returns two separate embeddings, though it is important that the training and evaluations be separated. If you want to do evaluations based on metrics used in this work, then it is necessaray to have separate embeddings for each modality.
 These arguments are minimal and feel free to add more if needed. You can see the examples of these functions in `sCIN/models`.
 
 Moreover, you can define an `assess` function for all evaluations on embeddings (example is in `sCIN/benchmarks/assess.py`).
