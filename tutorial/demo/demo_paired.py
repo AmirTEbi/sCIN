@@ -1,5 +1,5 @@
 """
-A demo script to show how sCIN can be used for paired and unpaired PBMC dataset.
+A demo script to show how sCIN can be used for paired PBMC dataset.
 
 To run:
 > cd sCIN

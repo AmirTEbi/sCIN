@@ -1,3 +1,11 @@
+"""
+A demo script to show how sCIN can be used for unpaired PBMC dataset.
+
+To run:
+> cd sCIN
+sCIN > python tutorial/demo/demo_unpaired.py --cfg_path "configs/sCIN/sCIN_pbmc.json"
+"""
+
 import numpy as np
 import pandas as pd
 import scanpy as sc
