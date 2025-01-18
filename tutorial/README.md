@@ -32,4 +32,4 @@ These arguments are minimal and feel free to add more if needed. You can see the
 
 Moreover, you can define an `assess` function for all evaluations on embeddings (example is in `sCIN/benchmarks/assess.py`).
 
-to see how to use sCIN for paired and unpaired multi-omics integration please refer to `demo.ipynb`.
+To see how to use sCIN for paired and unpaired multi-omics integration please refer to `demo.ipynb`.
