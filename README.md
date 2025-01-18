@@ -17,9 +17,9 @@ Then:
 cd sCIN
 poetry install sCIN
 ```
-Note that `poetry` should be installed on your system or you can install dependencies directly from `requirements.txt` by:
+Note that [Poetry](https://python-poetry.org/docs/#installation) should be installed on your system or you can install dependencies directly from `requirements.txt` by:
 ```
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 For tutorial on how to use sCIN and suggestions please refer to `tutorial` directory. 
