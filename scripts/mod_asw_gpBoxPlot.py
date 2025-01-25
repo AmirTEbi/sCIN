@@ -37,7 +37,7 @@ def plot_gp_asw_5(df:pd.DataFrame, save_dir:str, legend_names:dict, mod_colors:d
                 width=box_width, ax=ax)
     ax.set_xticks(pos)
     ax.set_xticklabels(prop_order)
-    ax.tick_params(axis='x', pad=25)
+    ax.tick_params(axis='x', pad=10)
     
     legend_handles = [
         Line2D(
@@ -49,13 +49,13 @@ def plot_gp_asw_5(df:pd.DataFrame, save_dir:str, legend_names:dict, mod_colors:d
     handles=legend_handles,
     title="",
     fontsize=14,
-    loc='upper center',  
-    bbox_to_anchor=(0.5, -0.15),  
+    loc='lower center',  
+    bbox_to_anchor=(0.5, 0.5),  # 0.5, -0.15
     ncol=3,
     frameon=False
     )
     plt.xlabel("")
-    ax.xaxis.labelpad = 25
+    #ax.xaxis.labelpad = 25
     plt.ylabel("ASW", fontsize=12)
     if xticks:
         plt.xticks(xticks['positions'], xticks['labels'], fontsize=12)

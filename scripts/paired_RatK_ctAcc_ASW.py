@@ -1,11 +1,15 @@
 import pandas as pd
 import numpy as np
+import matplotlib
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import seaborn as sns
 import os
 import argparse
 
+
+matplotlib.rcParams["font.family"] = "sans-serif"
+# matplotlib.rcParams['font.weight'] = 'bold'
 
 def make_palette(models:list, colors:list) -> dict:
 
@@ -58,8 +62,8 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
         ) for model in grouped_df['Models'].unique()
     ]
     plt.legend(
-        handles=legend_handles, title="", fontsize=12, loc='center left', 
-        bbox_to_anchor=(1, 0.5), frameon=False
+        handles=legend_handles, title="", fontsize=12, loc='lower center', 
+        bbox_to_anchor=(0.2, 0.6), frameon=False
     )
 
     plt.xlabel("k", fontsize=12)
@@ -67,6 +71,7 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
     xticks_positions = [10, 20, 30, 40, 50]
     plt.xticks(xticks_positions, labels=xticks_positions, fontsize=12)
     plt.yticks(fontsize=12)
+    plt.ylim(0, 0.33)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -86,10 +91,10 @@ def plot_asw_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
     plt.xlabel("")
     plt.ylabel("ASW", fontsize=12)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=12)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=13)
     else:
-        plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+        plt.xticks(fontsize=13)
+    plt.yticks(fontsize=13)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -114,12 +119,12 @@ def plot_ct_acc_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
                          palette=colors)
 
     plt.xlabel("")
-    plt.ylabel("Cell Type Accuracy", fontsize=12)
+    plt.ylabel("Cell Type Accuracy", fontsize=13)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=12)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=13)
     else:
-        plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+        plt.xticks(fontsize=13)
+    plt.yticks(fontsize=13)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -143,12 +148,12 @@ def plot_medr_24(df:pd.DataFrame, colors:dict,
         x="Models", y="norm_med_rank", data=df, palette=colors)
     
     plt.xlabel("")
-    plt.ylabel("Normalized Median Rank", fontsize=12)
+    plt.ylabel("Normalized Median Rank", fontsize=13)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=12)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=13)
     else:
-        plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+        plt.xticks(fontsize=13)
+    plt.yticks(fontsize=13)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.tight_layout()

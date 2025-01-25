@@ -27,7 +27,7 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
 
     legend_names = legend_names or {model: model for model in grouped_df["Models"].unique()}
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(9.7, 5.5))
     ax = plt.gca()
 
     for model in grouped_df['Models'].unique():
@@ -46,9 +46,9 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
         ) for model in grouped_df['Models'].unique()
     ]
     plt.legend(
-        handles=legend_handles, title="", 
-        fontsize=10, loc='center left', bbox_to_anchor=(1, 0.5),
-        frameon=False
+        handles=legend_handles, title="",               # 1, 0.5
+        fontsize=12, loc='lower center', bbox_to_anchor=(0.27, 0.88),
+        frameon=False, ncol=4, handletextpad=0.5
     )
 
     plt.xlabel("k", fontsize=12)
@@ -61,14 +61,14 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
     ax.spines['right'].set_visible(False)
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"unpaired_ratk_inv.{file_type}")
+    out = os.path.join(save_dir, f"unpaired_ratk.{file_type}")
     plt.savefig(out)
 
     
 def plot_ct_acc_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png", 
                   xticks=None, **kwargs) -> None:
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(9.33, 5.5))
     ax = plt.gca()
 
     inverse = kwargs.get("inverse", False)
@@ -93,7 +93,7 @@ def plot_ct_acc_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
     ax.spines['right'].set_visible(False)
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"unpaired_ct_acc_inv.{file_type}")
+    out = os.path.join(save_dir, f"unpaired_ct_acc.{file_type}")
     plt.savefig(out)
 
 
@@ -128,8 +128,8 @@ def main() -> None:
     colors = make_palette(models, colors, legend_order=list(legend.keys()))
 
     if args.all:
-        plot_ratk_5(df, colors, args.save_dir, file_type="pdf", legend_names=legend, inverse=True)
-        plot_ct_acc_5(df, colors, args.save_dir, file_type="pdf", xticks=xticks, inverse=True)
+        plot_ratk_5(df, colors, args.save_dir, file_type="pdf", legend_names=legend, inverse=False)
+        plot_ct_acc_5(df, colors, args.save_dir, file_type="pdf", xticks=xticks, inverse=False)
 
     else:
         if args.metric == "r_at_k":

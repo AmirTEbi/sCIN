@@ -1,5 +1,5 @@
 """
-This is a script to compare ASW metric between cool integrated embeddings, PCA integrated embeddings, and original datasets.
+This is a script to compare ASW metric between sCIN integrated embeddings, PCA integrated embeddings, and original datasets.
 """
 
 import pandas as pd

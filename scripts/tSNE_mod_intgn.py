@@ -1,222 +1,144 @@
 import numpy as np
-import pandas as pd
-import matplotlib.pyplot as plt 
+from sklearn.manifold import TSNE
+import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-import seaborn as sns
-from sklearn.metrics import silhouette_score
-import os
+import colorcet as cc
+from sCIN.utils.utils import map_cell_types
 import argparse
+import os
 
 
-def compute_asw(embs:np.array, labels:np.array) -> float:
+def plot_tsne(data, labels, unique_colors, title, legend_title, save_path, legend_ncol,
+              bbox_to_anchor, loc):
+
+    plt.figure(figsize=(13, 5.5))
+    unique_labels = np.unique(labels)
+    for i, label in enumerate(unique_labels):
+        mask = labels == label
+        plt.scatter(data[mask, 0], data[mask, 1], s=15, label=label, color=unique_colors[i])
     
-    return (silhouette_score(embs, labels) + 1) / 2
-
-
-def plot_gp_asw_5(df:pd.DataFrame, save_dir:str, legend_names:dict, mod_colors:dict, 
-               xticks:None, file_type="png") -> None:
-    
-
-    df['prop'] = df['prop'].astype(str)
-    prop_order = ["Random", "1", "5", "10", "20", "50", "Paired"]
-    df['prop'] = pd.Categorical(df['prop'], categories=prop_order, ordered=True)
-
-    box_width = 0.5  
-    group_spacing = 0.5
-    num_groups = len(prop_order)
-    pos = [
-        i * group_spacing for i in range(num_groups)
-    ]
-
-
-    plt.figure(figsize=(8, 6))
+    plt.tick_params(axis='both', which='major', labelsize=10)
     ax = plt.gca()
-
-    sns.boxplot(x="prop", y="asw", hue="mod", data=df, 
-                palette=mod_colors, hue_order=["Modality 1", "Modality 2", "Joint"],
-                width=box_width, ax=ax)
-    ax.set_xticks(pos)
-    ax.set_xticklabels(prop_order)
-    ax.tick_params(axis='x', pad=25)
-    
-    legend_handles = [
-        Line2D(
-            [0], [0], color=mod_colors[modality], linewidth=4, 
-            label=legend_names.get(modality, modality)  
-        ) for modality in df['mod'].unique()
-    ]
-    plt.legend(
-    handles=legend_handles,
-    title="",
-    fontsize=14,
-    loc='upper center',  
-    bbox_to_anchor=(0.5, -0.15),  
-    ncol=3,
-    frameon=False
-    )
-    plt.xlabel("")
-    ax.xaxis.labelpad = 25
-    plt.ylabel("ASW", fontsize=12)
-    if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=12)
-    else:
-        plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
+    plt.legend(
+        title=legend_title,
+        bbox_to_anchor=bbox_to_anchor,  # bottom: (0.5, -0.1)  next left: (1.05, 0.5)
+        loc=loc,
+        fontsize=14,
+        ncol=legend_ncol,
+        frameon=False,
+        markerscale=8,
+        columnspacing=0.5,
+        labelspacing=0.5 ,
+        handletextpad=0.5
+    )
+    plt.title(title, fontsize=12)
     plt.tight_layout()
-    plt.savefig(os.path.join(save_dir, f"fig5_b_V1.{file_type}"))
-
-
-def prop_type(value):
-
-    try:
-        return(int(value))
-    except ValueError:
-        if value == "Random":
-            return value
-        raise argparse.ArgumentTypeError(f"Invalid value for --prop: {value}. Must be an integer or 'Random'.")
+    plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+    plt.clf()
+  
 
 
 def main() -> None:
-    
+
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str)
+    parser.add_argument("--model", type=str)
     parser.add_argument("--paired", action="store_true")
     parser.add_argument("--unpaired", action="store_true")
-    parser.add_argument("--reps", type=int, default=10)
-    parser.add_argument("--prop", type=prop_type, nargs="*", 
-                        default=[1,5,10,20,50,"Random"], help="In %")
     args = parser.parse_args()
-
+    
+    mapping_f_path = {
+         "PBMC":"data/10x/mapped_cell_types.txt",
+         "CITE":"data/cite/mapped_cell_types.txt",
+         "SHARE":"data/share/mapped_cell_types.txt"}
+    
+    mapping = map_cell_types(path=mapping_f_path[args.data])
+    map_func = np.vectorize(lambda x: mapping[x])
+    
     if args.paired:
-        raise NotImplementedError
+
+        BASE_DIR = f"results/{args.data}/{args.model}/V1/rep1/embs"
+        SAVE_DIR = f"results/{args.data}/plots"
+        if not os.path.exists(SAVE_DIR):
+                os.makedirs(SAVE_DIR, exist_ok=True)
+        mod1_emb_path = os.path.join(BASE_DIR, "rna_emb0.npy")
+        mod2_emb_path = os.path.join(BASE_DIR, "atac_emb0.npy")
+        ct_lbls_path = os.path.join(BASE_DIR, "labels_test_0.npy")
+
+        embs1 = np.load(mod1_emb_path) 
+        embs2 = np.load(mod2_emb_path)
+        ct_lbls = np.load(ct_lbls_path)
+        m1 = np.repeat("Modality 1", len(embs1))
+        m2 = np.repeat("Modality 2", len(embs2))
+        mod_lbls = np.hstack((m1, m2))
+        
+        tsne = TSNE(n_components=2)
+        joint = np.vstack((embs1, embs2))
+        joint_tsne = tsne.fit_transform(joint)
+
+        # t-SNE plot colored by modalities
+        mod_colors = {"Modality 1": "#2c7fb8", "Modality 2": "#d95f0e"}
+        mod_unique_colors = [mod_colors[mod] for mod in np.unique(mod_lbls)]
+        plot_tsne(joint_tsne, mod_lbls, mod_unique_colors,
+                "t-SNE Colored by Modality", "Modalities",
+                os.path.join(SAVE_DIR, "paired_embs_tsne_coloredby_mods.jpg"),
+                legend_ncol=2)
+
+        # t-SNE plot colored by cell types
+        lbls = map_func(ct_lbls)
+        lbls = np.hstack((lbls, lbls))
+        print(lbls.shape)
+        cell_types = np.unique(lbls)
+        ct_colors = cc.glasbey[:len(cell_types)]
+        plot_tsne(joint_tsne, lbls, ct_colors,
+                "", "Cell Types", 
+                os.path.join(SAVE_DIR, "paired_embs_tsne_coloredby_celltypes.jpg"), 
+                legend_ncol=5)
+
 
     if args.unpaired:
-        UNPAIRED_MAIN_DIR = f"results/{args.data}/main_unpaired"
-        PAIRED_MAIN_DIR = f"results/{args.data}/sCIN/V1"
-        REP_DIRS = [f"rep{i+1}" for i in range(0, args.reps)]
-        PROP_DIRS = [f"p{p}" for p in args.prop]
-        res = pd.DataFrame(columns = ["prop", "rep", "mod", "asw"])
-
-        for i, d in enumerate(REP_DIRS):
-            
-            # Compute ASW for paired setting in this rep
-            paired_rna_embs = np.load(os.path.join(PAIRED_MAIN_DIR,
-                                                   f"rep{i+1}",
-                                                   "embs",
-                                                   f"rna_emb{10*i}.npy"))
-            print(paired_rna_embs.shape)
-            paired_atac_embs = np.load(os.path.join(PAIRED_MAIN_DIR,
-                                                    f"rep{i+1}",
-                                                    "embs",
-                                                    f"atac_emb{10*i}.npy"))
-            print(paired_atac_embs.shape)
-            paired_lbls = np.load(os.path.join(PAIRED_MAIN_DIR,
-                                               f"rep{i+1}",
-                                               "embs",
-                                               f"labels_test_{10*i}.npy"))
-            print(paired_lbls.shape)
-            paired_rna_asw = compute_asw(paired_rna_embs, paired_lbls)
-            print(paired_rna_asw)
-            paired_atac_asw = compute_asw(paired_atac_embs, paired_lbls)
-            paired_joint = np.column_stack((paired_rna_embs,
-                                            paired_atac_embs))
-            print(paired_atac_asw)
-            paired_joint_asw = compute_asw(paired_joint, paired_lbls)
-            print(paired_joint_asw)
-
-            paired_rna_row = pd.DataFrame({
-                "prop":["Paired"],
-                "rep":[i+1],
-                "mod":["Modality 1"],
-                "asw":[paired_rna_asw]
-            })
-            paired_atac_row = pd.DataFrame({
-                "prop":["Paired"],
-                "rep":[i+1],
-                "mod":["Modality 2"],
-                "asw":[paired_atac_asw]
-            })
-            paired_joint_row = pd.DataFrame({
-                "prop":["Paired"],
-                "rep":[i+1],
-                "mod":["Joint"],
-                "asw":[paired_joint_asw]
-            })
-            res = pd.concat([res, paired_rna_row, paired_atac_row, 
-                             paired_joint_row], ignore_index=True)
-
-            # Compute ASW for unpaired setting in this rep
-            rep_dir = os.path.join(UNPAIRED_MAIN_DIR, d)
-            for p, p_dir in zip(args.prop, PROP_DIRS):
-                prop_dir = os.path.join(rep_dir, p_dir, "embs")
-                files = [f for f in os.listdir(prop_dir) \
-                         if f.endswith(".npy")]
-                
-                # print(f"Processing rep_dir: {rep_dir}")
-                # print(f"prop_dir: {prop_dir}, files: {files}")
-
-                rna_embs_files = [f for f in files if "rna" in f]
-                atac_embs_files = [f for f in files if "atac" in f]
-                lbls_files = [f for f in files if "labels" in f]
-
-                for f_r, f_a, lbls in zip(rna_embs_files,
-                                          atac_embs_files,
-                                          lbls_files):
-                    rna_embs = np.load(os.path.join(prop_dir, f_r))
-                    atac_embs = np.load(os.path.join(prop_dir, f_a))
-                    labels = np.load(os.path.join(prop_dir, lbls))
-
-                    rna_asw = compute_asw(rna_embs, labels)
-                    atac_asw = compute_asw(atac_embs, labels)
-                    joint = np.column_stack((rna_embs, atac_embs))
-                    joint_asw = compute_asw(joint, labels)
-
-                    print(p)
-                    rna_row = pd.DataFrame({
-                        "prop":[p],
-                        "rep":[i+1],
-                        "mod":["Modality 1"],
-                        "asw":[rna_asw]
-                    })
-                    atac_row = pd.DataFrame({
-                        "prop":[p],
-                        "rep":[i+1],
-                        "mod":["Modality 2"],
-                        "asw":[atac_asw]
-                    })
-                    joint_row = pd.DataFrame({
-                        "prop":[p],
-                        "rep":[i+1],
-                        "mod":["Joint"],
-                        "asw":[joint_asw]
-                    })
-
-                    res = pd.concat([res, rna_row, atac_row, joint_row], ignore_index=True)
-
-
-        print(res['prop'].value_counts())
-
-        PLOT_SAVE_DIR = os.path.join(UNPAIRED_MAIN_DIR, "plots")
-        os.makedirs(PLOT_SAVE_DIR, exist_ok=True)
         
-        COLORS = {"Modality 1":"#7fc97f", "Modality 2":"#beaed4", "Joint":"#fdc086"}
-        LEGENDS = {
-            "Modality 1": "RNA",
-            "Modality 2": "ATAC",
-            "Joint": "Joint"
-        }
-        XTICKS = {
-            "positions": range(7),
-            "labels": ["Random", "1%", "5%", "10%", "20%", "50%", "Paired"]
-        }
-        plot_gp_asw_5(df=res, save_dir=PLOT_SAVE_DIR,legend_names=LEGENDS,
-                   mod_colors=COLORS, xticks=XTICKS, file_type="pdf")
-                   
-        res.to_csv(os.path.join(UNPAIRED_MAIN_DIR, "unpaired_asw_mods_V1.csv"), index=False)
+        BASE_DIR = f"results/{args.data}/main_unpaired/rep1/p50/embs"
+        SAVE_DIR = f"results/{args.data}/main_unpaired/plots"
+        mod1_emb_path = os.path.join(BASE_DIR, "rna_emb0.npy")
+        mod2_emb_path = os.path.join(BASE_DIR, "atac_emb0.npy")
+        ct_lbls_path = os.path.join(BASE_DIR, "labels_test_0.npy")
 
-        print("Finish.")
+        embs1 = np.load(mod1_emb_path) 
+        embs2 = np.load(mod2_emb_path)
+        ct_lbls = np.load(ct_lbls_path)
+        m1 = np.repeat("RNA", len(embs1))
+        m2 = np.repeat("ATAC", len(embs2))
+        mod_lbls = np.hstack((m1, m2))
+
+        print("First plotting starts ...")
+        tsne = TSNE(n_components=2)
+        joint = np.row_stack((embs1, embs2))
+        joint_tsne = tsne.fit_transform(joint)
+
+        # t-SNE plot colored by modalities
+        mod_colors = {"RNA": "#7fc97f", "ATAC": "#beaed4"}
+        mod_unique_colors = [mod_colors[mod] for mod in np.unique(mod_lbls)]
+        plot_tsne(joint_tsne, mod_lbls, mod_unique_colors,
+                "", "",
+                os.path.join(SAVE_DIR, "upaired_embs_tsne_coloredby_mods_V2.jpg"),
+                legend_ncol=1, bbox_to_anchor=(0.3, 0.9), loc="center")
+
+        # t-SNE plot colored by cell types
+        print("Second plotting starts ...")
+        lbls = map_func(ct_lbls)
+        lbls = np.hstack((lbls, lbls))
+        print(lbls.shape)
+        cell_types = np.unique(lbls)
+        ct_colors = cc.glasbey[:len(cell_types)]
+        plot_tsne(joint_tsne, lbls, ct_colors,
+                "", "", 
+                os.path.join(SAVE_DIR, "unpaired_embs_tsne_coloredby_celltypes_V2.jpg"), 
+                legend_ncol=10, bbox_to_anchor=(12, 7.5), loc="center")
+    
+    print("Finished.")
 
 
 if __name__ == "__main__":
