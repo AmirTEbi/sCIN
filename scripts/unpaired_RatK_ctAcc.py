@@ -27,7 +27,7 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
 
     legend_names = legend_names or {model: model for model in grouped_df["Models"].unique()}
 
-    plt.figure(figsize=(9.7, 5.5))
+    plt.figure(figsize=(8.5, 5))
     ax = plt.gca()
 
     for model in grouped_df['Models'].unique():
@@ -47,15 +47,15 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
     ]
     plt.legend(
         handles=legend_handles, title="",               # 1, 0.5
-        fontsize=12, loc='lower center', bbox_to_anchor=(0.27, 0.88),
+        fontsize=12, loc='lower center', bbox_to_anchor=(0.35, 0.85),
         frameon=False, ncol=4, handletextpad=0.5
     )
 
-    plt.xlabel("k", fontsize=12)
-    plt.ylabel("Recall@k", fontsize=12)
+    plt.xlabel("k", fontsize=14)
+    plt.ylabel("Recall@k", fontsize=14)
     xticks_positions = [10, 20, 30, 40, 50]
     plt.xticks(xticks_positions, labels=xticks_positions, fontsize=12)
-    plt.yticks(fontsize=12)
+    plt.yticks(fontsize=14)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -68,7 +68,7 @@ def plot_ratk_5(df: pd.DataFrame, colors: dict, save_dir: str, file_type="png",
 def plot_ct_acc_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png", 
                   xticks=None, **kwargs) -> None:
 
-    plt.figure(figsize=(9.33, 5.5))
+    plt.figure(figsize=((8.5, 5)))
     ax = plt.gca()
 
     inverse = kwargs.get("inverse", False)
@@ -82,12 +82,12 @@ def plot_ct_acc_5(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
                          order=order)
 
     plt.xlabel("")
-    plt.ylabel("Cell Type Accuracy", fontsize=12)
+    plt.ylabel("Cell Type Accuracy", fontsize=14)
     if xticks:
-        plt.xticks(xticks["positions"], xticks['labels'], fontsize=12)
+        plt.xticks(xticks["positions"], xticks['labels'], fontsize=14)
     else:
-        plt.xticks(fontsize=12)
-    plt.yticks(fontsize=12)
+        plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)

@@ -44,7 +44,7 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
 
     legend_names = legend_names or {model: model for model in grouped_df["Models"].unique()}
 
-    plt.figure(figsize=(6, 4))
+    plt.figure(figsize=(6.8, 4))
     ax = plt.gca()
     for model in grouped_df['Models'].unique():
         model_df = grouped_df[grouped_df['Models'] == model]
@@ -66,11 +66,11 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
         bbox_to_anchor=(0.2, 0.6), frameon=False
     )
 
-    plt.xlabel("k", fontsize=12)
-    plt.ylabel("Recall@k", fontsize=12)
+    plt.xlabel("k", fontsize=14)
+    plt.ylabel("Recall@k", fontsize=14)
     xticks_positions = [10, 20, 30, 40, 50]
     plt.xticks(xticks_positions, labels=xticks_positions, fontsize=12)
-    plt.yticks(fontsize=12)
+    plt.yticks(fontsize=14)
     plt.ylim(0, 0.33)
 
     ax.spines['top'].set_visible(False)
@@ -89,12 +89,12 @@ def plot_asw_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
     ax = sns.boxplot(x="Models", y="cell_type_ASW", data=df, palette=colors)
 
     plt.xlabel("")
-    plt.ylabel("ASW", fontsize=12)
+    plt.ylabel("ASW", fontsize=14)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=13)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=14)
     else:
-        plt.xticks(fontsize=13)
-    plt.yticks(fontsize=13)
+        plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -119,12 +119,12 @@ def plot_ct_acc_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
                          palette=colors)
 
     plt.xlabel("")
-    plt.ylabel("Cell Type Accuracy", fontsize=13)
+    plt.ylabel("Cell Type Accuracy", fontsize=14)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=13)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=14)
     else:
-        plt.xticks(fontsize=13)
-    plt.yticks(fontsize=13)
+        plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -148,12 +148,12 @@ def plot_medr_24(df:pd.DataFrame, colors:dict,
         x="Models", y="norm_med_rank", data=df, palette=colors)
     
     plt.xlabel("")
-    plt.ylabel("Normalized Median Rank", fontsize=13)
+    plt.ylabel("Normalized Median Rank", fontsize=14)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=13)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=14)
     else:
-        plt.xticks(fontsize=13)
-    plt.yticks(fontsize=13)
+        plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.tight_layout()

@@ -23,3 +23,6 @@ pip install -r requirements.txt
 ```
 
 For tutorial on how to use sCIN and suggestions please refer to `tutorial` directory. 
+
+method 1
+method 2
