@@ -1,0 +1,31 @@
+{
+    "DATA_DIR":{
+
+        "RNA_DIR":"./data/cite/rna.h5ad",
+        "ATAC_DIR":"./data/cite/adt.h5ad"
+    },
+
+    "MODEL_NAMES":["AE"],
+
+    "SETTINGS":
+    {
+        "AE":
+        {
+            "EPOCHS":150,
+            "lr":1e-2,
+            "hidden_dim":64,
+            "latent_dim":16,
+            "batch_size":64,
+            "IS_PARTIAL":"False",
+            "PCs":100
+        }
+    },
+
+    "SAVE_DIRS":
+    {
+        "AE":"./results/CITE/AE/test_unpaired/embs",
+        "EXP":"./results/CITE/AE/test_unpaired"
+    },
+
+    "EXPERIMENT_NAME":"AE_test_unpaired_CITE_10_Reps"
+}  

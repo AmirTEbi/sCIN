@@ -1,0 +1,27 @@
+{
+    "DATA_DIR":{
+
+        "RNA_DIR":"master_thesis/data/share/Ma-2020-RNA.h5ad",
+        "ATAC_DIR":"master_thesis/data/share/Ma-2020-ATAC.h5ad"
+    },
+
+    "MODEL_NAMES":["Con-AAE"],
+
+    "SETTINGS":
+    {
+        "Con-AAE":
+        {
+            "EPOCHS":101,
+            "IS_PARTIAL":"False",
+            "PCs":2000
+        }
+    },
+
+    "SAVE_DIRS":
+    {
+        "scCOOL":"sc-cool/results/SHARE/ConAAE/test_unpaired/embs",
+        "EXP":"sc-cool/results/SHARE/ConAAE/test_unpaired"
+    },
+
+    "EXPERIMENT_NAME":"ConAAE_test_unpaired_SHARE_10_Reps"
+}

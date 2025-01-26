@@ -1,0 +1,31 @@
+{
+    "DATA_DIR":{
+
+        "RNA_DIR":"./data/10x/10x-Multiome-Pbmc10k-RNA.h5ad",
+        "ATAC_DIR":"./data/10x/10x-Multiome-Pbmc10k-ATAC.h5ad"
+    },
+
+    "MODEL_NAMES":["AE"],
+
+    "SETTINGS":
+    {
+        "AE":
+        {
+            "EPOCHS":150,
+            "lr":1e-2,
+            "hidden_dim":256,
+            "latent_dim":128,
+            "batch_size":64,
+            "IS_PARTIAL":"False",
+            "PCs":2000
+        }
+    },
+
+    "SAVE_DIRS":
+    {
+        "AE":"./results/PBMC/AE/test_unpaired/embs",
+        "EXP":"./results/PBMC/AE/test_unpaired"
+    },
+
+    "EXPERIMENT_NAME":"AE_test_unpaired_PBMC_10_Reps"
+}
