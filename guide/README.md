@@ -62,10 +62,10 @@ Note that there is no need to define a new `get_emb` function since the training
 
 ## How to add a new dataset
 
-Add a new dataset in form of key:value to the `DATA` dictionary.
+Add a new dataset in form of `key:value` to the `DATA` dictionary.
 
-- key: The name of the dataset. It should be the same as the `--data` flag value.
-- value: A tuple containing paths to the files of modalities. Note that input files should in `.h5ad` format. 
+- `key`: The name of the dataset. It should be the same as the `--data` flag value.
+- `value`: A tuple containing paths to the files of modalities. Note that input files should in `.h5ad` format. 
 
 
 To see how to use sCIN for paired and unpaired multi-omics integration please refer to `demo` directory.
