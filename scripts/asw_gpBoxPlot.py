@@ -3,47 +3,47 @@ import anndata as ad
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
-import umap
-import colorcet as cc
 import os
 from sklearn.manifold import TSNE
 from sklearn.decomposition import PCA
-from sCIN.utils.utils import load_data
 from sklearn.metrics import silhouette_score
 from sklearn.model_selection import train_test_split
-from scripts.mod_asw_gpBoxPlot import compute_asw
-from statistics import fmean
 import argparse
 
 
-def plot_bar_asw(df:pd.DataFrame, save_dir:str, file_type="jpg") -> None:
-
-    labels = df['label'].unique()  
-    pivot_df = df.pivot(index='data', columns='label', values='ASW')[labels]
-
-    x = np.arange(len(pivot_df.index))  
-    num_labels = len(labels)
-    bar_width = 0.15
-    space = 0.05
-
-    offsets = np.arange(num_labels) * (bar_width + space)
-    offsets -= (offsets[-1] + bar_width) / 2 
-    colors = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728']
-
-    fig, ax = plt.subplots(figsize=(10, 6))
-    for idx, label in enumerate(labels):
-        ax.bar(x + offsets[idx], pivot_df[label], width=bar_width,
-               label=label, color=colors[idx])
+def compute_asw(embs:np.array, labels:np.array) -> float:
     
+    return (silhouette_score(embs, labels) + 1) / 2
+
+
+def plot_gp_asw(df:pd.DataFrame, save_dir:str, color_palette:dict, 
+                xticks_order=list, file_type="jpg") -> None:
+
+    df["data"] = pd.Categorical(df["data"])
+    box_width = 0.5  
+    group_spacing = 1
+    num_groups = len(np.unique(df["data"].values))
+    pos = [
+        i * group_spacing for i in range(num_groups)
+    ]
+
+    plt.figure(figsize=(8, 6))
+    ax = plt.gca()
+    sns.boxplot(x="data", y="ASW", hue="label", data=df, 
+                palette=color_palette, hue_order=["Modality 1", "Modality 2", "PCA",
+                                                  "sCIN"], width=box_width, ax=ax)
+    ax.set_xticks(pos)
+    ax.set_xticklabels(xticks_order)
+    ax.tick_params(axis='x', pad=10, labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
-    ax.set_xticks(x)
-    ax.set_xticklabels(pivot_df.index)
     ax.set_xlabel("")
-    ax.set_ylabel("ASW")
-    ax.legend(title="", bbox_to_anchor=(1.05, 1), loc='upper left', frameon=False)
+    ax.set_ylabel("ASW", fontsize=14)
+    ax.legend(title="", bbox_to_anchor=(0.03, 1), loc='upper left', frameon=False,
+              fontsize=14)
     plt.tight_layout()
-    out = os.path.join(save_dir, f"asw_grouped_bars.{file_type}")
+    out = os.path.join(save_dir, f"asw_grouped_boxes.{file_type}")
     plt.savefig(out, bbox_inches='tight', pad_inches=0)
 
 
@@ -69,7 +69,7 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    FILE_TYPE = "jpg"
+    FILE_TYPE = "pdf"
 
     data_paths = {
         "SHARE-seq":("data/share/Ma-2020-RNA.h5ad",
@@ -82,9 +82,9 @@ def main() -> None:
     paired_embs_paths = {"SHARE-seq":"results/SHARE/sCIN/V1",
                          "PBMC":"results/PBMC/sCIN/V1",
                          "CITE-seq":"results/CITE/sCIN/V1"}
-    unpaired_embs_paths = {"SHARE":"results/SHAER/main_unpaired",
+    unpaired_embs_paths = {"SHARE-seq":"results/SHARE/main_unpaired",
                            "PBMC":"results/PBMC/main_unpaired",
-                           "CITE":"results/CITE/main_unpaired"}
+                           "CITE-seq":"results/CITE/main_unpaired"}
     if args.all_seeds:
         seeds = np.arange(0, 100, 10).tolist()
     else:
@@ -93,7 +93,7 @@ def main() -> None:
     #rep_dirs = [f"rep{int((seed/10) + 1)}" for seed in seeds]
 
     df = pd.DataFrame(columns=[
-        "data", "label", "ASW"
+        "data", "rep", "label", "ASW"
     ])
 
     if args.compute:
@@ -110,10 +110,6 @@ def main() -> None:
             pca = PCA(n_components=256)  # As same as embs
 
             if args.paired:
-                embs_asws_list = []
-                mod1_asw_list = []
-                mod2_asw_list = []
-                pca_asw_list = []
                 for seed in seeds:
                     rna_embs = np.load(os.path.join(paired_embs_paths[data], 
                                                     f"rep{int((seed/10)+1)}", 
@@ -126,7 +122,12 @@ def main() -> None:
                                                     "embs", f"labels_test_{seed}.npy"))
                     joint = np.column_stack((rna_embs, atac_embs))
                     embs_asw = compute_asw(joint, embs_lbls)
-                    embs_asws_list.append(embs_asw)
+                    embs_row = pd.DataFrame({
+                        "data":[data],
+                        "rep":[int((seed/10)+1)],
+                        "label":["sCIN"],
+                        "ASW":embs_asw
+                    })
 
                     rna_train, rna_test, atac_train, \
                         atac_test, _,lbls_test = train_test_split(
@@ -135,33 +136,35 @@ def main() -> None:
                     
                     mod1_asw = compute_asw(rna_test, lbls_test)
                     mod2_asw = compute_asw(atac_test, lbls_test)
-                    mod1_asw_list.append(mod1_asw)
-                    mod2_asw_list.append(mod2_asw)
+                    # mod1_asw_list.append(mod1_asw)
+                    # mod2_asw_list.append(mod2_asw)
+                    mod1_row = pd.DataFrame({
+                        "data":[data],
+                        "rep":[int((seed/10)+1)],
+                        "label":["Modality 1"],
+                        "ASW":mod1_asw
+                    })
+                    mod2_row = pd.DataFrame({
+                        "data":[data],
+                        "rep":[int((seed/10)+1)],
+                        "label":["Modality 2"],
+                        "ASW":mod2_asw
+                    })
 
                     joint_data_train = np.column_stack((rna_train, atac_train))
                     pca.fit(joint_data_train)
                     joint_data_test = np.column_stack((rna_test, atac_test))
                     joint_data_pca = pca.transform(joint_data_test)
                     joint_data_pca_asw = compute_asw(joint_data_pca, lbls_test)
-                    pca_asw_list.append(joint_data_pca_asw)
-
-                avg_embs_asw = fmean(embs_asws_list)
-                avg_mod1_asw = fmean(mod1_asw_list)
-                avg_mod2_asw = fmean(mod2_asw_list)
-                avg_pca_asw = fmean(pca_asw_list)
-                temp_dict = {
-                    "sCIN":avg_embs_asw,
-                    "Modality 1":avg_mod1_asw,
-                    "Modality 2":avg_mod2_asw,
-                    "PCA":avg_pca_asw
-                }
-                for lbl, asw in temp_dict.items():
-                    row = pd.DataFrame({
+                    pca_row = pd.DataFrame({
                         "data":[data],
-                        "label":[lbl],
-                        "ASW":asw
+                        "rep":[int((seed/10)+1)],
+                        "label":["PCA"],
+                        "ASW":joint_data_pca_asw
                     })
-                    df = pd.concat([df, row], ignore_index=True)
+
+                    df = pd.concat([df, embs_row, mod1_row, mod2_row, pca_row],
+                                   ignore_index=True)
                   
             elif args.unpaired:
                 raise NotImplementedError
@@ -170,13 +173,29 @@ def main() -> None:
                                 index=False)
         
         # Plot
-        plot_bar_asw(df= df, save_dir=args.save_dir)
+        color_palette = {
+            "Modality 1":"#d7191c",
+            "Modality 2":"#fdae61",
+            "PCA":"#abdda4",
+            "sCIN":"#2b83ba"
+        }
+        xticks_order = ["CITE-seq", "SHARE-seq", "PBMC"]
+        plot_gp_asw(df= df, save_dir=args.save_dir, color_palette=color_palette,
+                    xticks_order=xticks_order, file_type=FILE_TYPE)
             
 
     elif args.from_file:
         if args.paired:
             df = pd.read_csv(args.file_path)
-            plot_bar_asw(df=df, save_dir=args.save_dir)
+            color_palette = {
+            "Modality 1":"#d7191c",
+            "Modality 2":"#fdae61",
+            "PCA":"#abdda4",
+            "sCIN":"#2b83ba"
+            }
+            xticks_order = ["CITE-seq", "SHARE-seq", "PBMC"]
+            plot_gp_asw(df= df, save_dir=args.save_dir, color_palette=color_palette,
+                        xticks_order=xticks_order, file_type=FILE_TYPE)
 
         elif args.unpaired:
             raise NotImplementedError

@@ -48,7 +48,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--cfg_path", type=str)
     parser.add_argument("--model", type=str, default="all")
-    parser.add_argument("--data", type=str)
+    parser.add_argument("--data", type=str, help="The value should be the same as the key in DATA.")
     parser.add_argument("--seed_range", type=int, default=100)
     parser.add_argument("--outfile", type=str)
     parser.add_argument("--quick_test", action="store_true")

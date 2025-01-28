@@ -22,7 +22,7 @@ def plot_gp_asw_5(df:pd.DataFrame, save_dir:str, legend_names:dict, mod_colors:d
     df['prop'] = pd.Categorical(df['prop'], categories=prop_order, ordered=True)
 
     box_width = 0.5  
-    group_spacing = 0.5
+    group_spacing = 1
     num_groups = len(prop_order)
     pos = [
         i * group_spacing for i in range(num_groups)
