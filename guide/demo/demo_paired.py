@@ -1,11 +1,3 @@
-"""
-A demo script to show how sCIN can be used for paired PBMC dataset.
-
-To run:
-> cd sCIN
-sCIN > python tutorial/demo/demo_paired.py --cfg_path "configs/sCIN/sCIN_pbmc.json"
-"""
-
 import numpy as np
 import pandas as pd
 import scanpy as sc
@@ -19,7 +11,9 @@ from sCIN.models.sCIN import (Mod1Encoder,
                               sCIN, 
                               train_sCIN,
                               get_emb_sCIN)
+
 # Imports your model's functions here.
+
 from sCIN.benchmarks.assess import (compute_metrics, assess)
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import silhouette_score
@@ -32,6 +26,7 @@ import matplotlib.pyplot as plt
 import time
 import argparse
 import os
+import logging as log
 
 
 # Datasets and their paths. Add key:value in form of "data_name":(mod1_path, mod2_path), if needed. 
@@ -40,6 +35,11 @@ DATA = {
             "data/10x/10x-Multiome-Pbmc10k-ATAC.h5ad")
 }
 
+log.basicConfig(
+    level=log.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 
 def main() -> None:
 
@@ -60,7 +60,7 @@ def main() -> None:
     mod1_path, mod2_path = DATA["PBMC"]
     mod1 = ad.read_h5ad(mod1_path)
     mod2 = ad.read_h5ad(mod2_path)
-    print("Data loaded successfully.")
+    log.info("Data loaded successfully.")
 
     # Get training and evaluation function for the model
     train_func_name = f"train_{args.model}"
@@ -80,9 +80,8 @@ def main() -> None:
         # Split data to train and test set
         mod1_train, mod1_test, mod2_train, mod2_test, \
                     labels_train, labels_test = split_full_data(mod1, mod2, seed=seed)
-        print("Data splitted.")
+        log.info("Data splitted.")
 
-        print("Training has been started ...")
         save_dir_seed = os.path.join(args.base_save_dir, f"rep{seeds.index(seed) + 1}")
         os.makedirs(save_dir_seed, exist_ok=True)
         
@@ -91,7 +90,7 @@ def main() -> None:
                                 epochs=epochs, settings=SETTINGS,
                                 seed=seed, is_pca=True, save_dir=save_dir_seed)
         
-        print("Evaluation has been started ...")
+        log.info("")
 
         # Generate embeddings
         mod1_embs, mod2_embs = get_emb_func(mod1_test, mod2_test, labels_test, 
