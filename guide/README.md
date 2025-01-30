@@ -4,7 +4,7 @@
 
 First, you need to create a `YourModelName.py` file containing the training, evaluations, and helper functions of your model. For instance `sCIN.py`.
 
-Note that the name of the `YourModelName.py` file should be the name of your model without special characters except `_`. You should also import all related function from `YourModelName.py` file to the main script, for instance `demo_paired.py` or `demo_unpaired.py` in `demo` directory.
+Note that the name of the `YourModelName.py` file should be the name of your model without special characters except `_` (examples in `sCIN/models`). You should also import all related function from `YourModelName.py` file to the main script, for instance `demo_paired.py` or `demo_unpaired.py` in `demo` directory.
 
 ### Paired datasets
 
