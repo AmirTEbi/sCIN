@@ -62,9 +62,9 @@ Note that there is no need to define a new `get_emb` function since the training
 
 ## How to add a new dataset
 
-Add a new dataset in form of `key:value` to the `DATA` dictionary.
+Add a new dataset in form of `key:value` to the `DATA` dictionary in `demo_paired.py` or `demo_unpaired.py`.
 
-- `key`: The name of the dataset. It should be the same as the `--data` flag value.
+- `key`: The name of the dataset. It should be the same as the `--data` flag value, for instance "PBMC".
 - `value`: A tuple containing paths to the files of modalities. Note that input files should in `.h5ad` format. 
 
 
