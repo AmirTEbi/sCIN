@@ -1,6 +1,6 @@
 # Single-cell Contrastive INtegration (sCIN)
 
-sCIN is a neural network framework inspired by CLIP (Radford _et al_.(2022)) for single-cell multi-omics data integration.
+sCIN is a neural network framework inspired based on Constrastive Learning for single-cell multi-omics data integration.
 
 ![sCIN workflow](sCIN_framework.png)
 Paper: add later
