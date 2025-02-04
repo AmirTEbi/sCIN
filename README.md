@@ -2,8 +2,7 @@
 
 sCIN is a neural network framework inspired by CLIP (Radford _et al_.(2022)) for single-cell multi-omics data integration.
 
-[Alt Text](sCIN_framework.png "sCIN workflow")
-
+![sCIN workflow](sCIN_framework.png)
 Paper: add later
 
 ## Installation
