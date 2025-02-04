@@ -4,7 +4,7 @@
 
 First, you need to create a `YourModelName.py` file containing the training, evaluations, and helper functions of your model. For instance `sCIN.py`.
 
-Note that the name of the `YourModelName.py` file should be the name of your model without special characters except `_`. You should also import all related function from `YourModelName.py` file to the main script, for instance `demo_paired.py` or `demo_unpaired.py` in `demo` directory.
+Note that the name of the `YourModelName.py` file should be the name of your model without special characters except `_` (examples in `sCIN/models`). You should also import all related function from `YourModelName.py` file to the main script, for instance `demo_paired.py` or `demo_unpaired.py` in `demo` directory.
 
 ### Paired datasets
 
@@ -35,7 +35,7 @@ To benchamrk your framework against models used in this work (or any models in g
 - `labels_test`: Test labels. If your model does not use labels during training, feel free to set this to `None`.
 - `trained_model`: The trained model object.
 
-It is not an obligation that `get_emb_YouModelName` returns two separate embeddings, though it is important that the training and evaluations be separated. If you want to do evaluations based on metrics used in this work, then it is necessaray to have separate embeddings for each modality.
+**It is not an obligation that `get_emb_YouModelName` returns two separate embeddings, though it is important that the training and evaluations be separated. If you want to do evaluations based on metrics used in this work, then it is necessaray to have separate embeddings for each modality**.
 These arguments are minimal and feel free to add more if needed. You can see the examples of these functions in `sCIN/models`.
 
 Moreover, you can define an `assess` function for all evaluations on embeddings (example is in `sCIN/benchmarks/assess.py`).
@@ -62,10 +62,26 @@ Note that there is no need to define a new `get_emb` function since the training
 
 ## How to add a new dataset
 
-Add a new dataset in form of `key:value` to the `DATA` dictionary.
+Add a new dataset in form of `key:value` to the `DATA` dictionary in `demo_paired.py` or `demo_unpaired.py`.
 
-- `key`: The name of the dataset. It should be the same as the `--data` flag value.
+- `key`: The name of the dataset. It should be the same as the `--data` flag value, for instance "PBMC".
 - `value`: A tuple containing paths to the files of modalities. Note that input files should in `.h5ad` format. 
 
 
 To see how to use sCIN for paired and unpaired multi-omics integration please refer to `demo` directory.
+
+# How to run demo scripts
+
+1. Paired data integration:
+
+```
+cd sCIN
+python tutorial/demo/demo_paired.py --cfg_path configs/sCIN/sCIN_pbmc.json
+```
+
+2. Unpaired data integration:
+
+```
+cd sCIN
+python tutorial/demo/demo_unpaired.py --cfg_path configs/sCIN/sCIN_pbmc.json
+```
