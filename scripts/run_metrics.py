@@ -1,9 +1,6 @@
 import numpy as np
 import pandas as pd
 from sklearn.metrics import silhouette_score
-from sklearn.decomposition import PCA
-from sklearn.neighbors import KDTree
-import matplotlib.pyplot as plt 
 from sCIN.models.ConAAE.conAAE import mink
 from sCIN.benchmarks.assess import compute_metrics
 import os
