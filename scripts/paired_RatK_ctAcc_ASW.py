@@ -44,7 +44,7 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
 
     legend_names = legend_names or {model: model for model in grouped_df["Models"].unique()}
 
-    plt.figure(figsize=(8.46, 6.45))
+    plt.figure(figsize=(7.7, 6.15))
     ax = plt.gca()
     for model in grouped_df['Models'].unique():
         model_df = grouped_df[grouped_df['Models'] == model]
@@ -62,15 +62,15 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
         ) for model in grouped_df['Models'].unique()
     ]
     plt.legend(
-        handles=legend_handles, title="", fontsize=14, loc='lower center', 
-        bbox_to_anchor=(0.15, 0.7), frameon=False
+        handles=legend_handles, title="", fontsize=18, loc='lower center', 
+        bbox_to_anchor=(0.2, 0.62), frameon=False
     )
 
-    plt.xlabel("k", fontsize=14)
-    plt.ylabel("Recall@k", fontsize=14)
+    plt.xlabel("k", fontsize=20)
+    plt.ylabel("Recall@k", fontsize=20)
     xticks_positions = [10, 20, 30, 40, 50]
-    plt.xticks(xticks_positions, labels=xticks_positions, fontsize=14)
-    plt.yticks(fontsize=14)
+    plt.xticks(xticks_positions, labels=xticks_positions, fontsize=18)
+    plt.yticks(fontsize=18)
     plt.ylim(0, 0.32)
 
     ax.spines['top'].set_visible(False)
@@ -84,17 +84,17 @@ def plot_ratk_24(df: pd.DataFrame, colors: dict, save_dir: str,
 def plot_asw_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png", 
                 xticks=None) -> None:
     
-    plt.figure(figsize=(8.46, 6.40))
+    plt.figure(figsize=(7.2, 6.15))
     ax = plt.gca()
     ax = sns.boxplot(x="Models", y="cell_type_ASW", data=df, palette=colors)
 
     plt.xlabel("")
-    plt.ylabel("ASW", fontsize=14)
+    plt.ylabel("ASW", fontsize=20)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=14)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=18, rotation=45)
     else:
-        plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+        plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
     plt.ylim(0, 0.73)
 
     ax.spines['top'].set_visible(False)
@@ -108,7 +108,7 @@ def plot_asw_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
 def plot_ct_acc_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png", 
                   xticks=None, **kwargs) -> None:
 
-    plt.figure(figsize=(8.46, 6.40))
+    plt.figure(figsize=(7.1, 5.94))
     ax = plt.gca()
 
     inverse = kwargs.get("inverse", False)
@@ -120,12 +120,12 @@ def plot_ct_acc_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
                          palette=colors)
 
     plt.xlabel("")
-    plt.ylabel("Cell Type Accuracy", fontsize=14)
+    plt.ylabel("Cell Type Accuracy", fontsize=20)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=14)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=18, rotation=45)
     else:
-        plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+        plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -142,19 +142,19 @@ def plot_medr_24(df:pd.DataFrame, colors:dict,
     df['norm_med_rank'] = (df["MedR"] - df['MedR'].min()) / \
         (df['MedR'].max() - df['MedR'].min())
     
-    plt.figure(figsize=(8.46, 6.40))
+    plt.figure(figsize=(7.86, 5.94))
     ax = plt.gca()
 
     sns.boxplot(
         x="Models", y="norm_med_rank", data=df, palette=colors)
     
     plt.xlabel("")
-    plt.ylabel("Normalized Median Rank", fontsize=14)
+    plt.ylabel("Normalized Median Rank", fontsize=20)
     if xticks:
-        plt.xticks(xticks['positions'], xticks['labels'], fontsize=14)
+        plt.xticks(xticks['positions'], xticks['labels'], fontsize=18, rotation=45)
     else:
-        plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
+        plt.xticks(fontsize=18)
+    plt.yticks(fontsize=18)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
     plt.tight_layout()
@@ -200,13 +200,13 @@ def main() -> None:
             plot_ratk_24(df, colors, args.save_dir, file_type="pdf", legend_names=legend)
 
         elif args.metric == "ASW":
-            plot_asw_24(df, colors, args.save_dir, file_type="pdf", xticks=xticks)
+            plot_asw_24(df, colors, args.save_dir, file_type="png", xticks=xticks)
         
         elif args.metric == "ct_acc":
-            plot_ct_acc_24(df, colors, args.save_dir, file_type="pdf",xticks=xticks)
+            plot_ct_acc_24(df, colors, args.save_dir, file_type="png",xticks=xticks)
         
         elif args.metric == "medr":
-            plot_medr_24(df, colors, args.save_dir, file_type="pdf", xticks=xticks)
+            plot_medr_24(df, colors, args.save_dir, file_type="png", xticks=xticks)
 
     print("Finished.")
 
