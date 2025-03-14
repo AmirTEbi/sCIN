@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import argparse
 
-def MedR(embs1, embs2):
+def compute_MedR(embs1, embs2):
     """
     Find the median rank of the correct match between two sets of embeddings.
 
