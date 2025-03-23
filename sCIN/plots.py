@@ -9,8 +9,9 @@ from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
 import seaborn as sns
 import colorcet as cc
-from typing import Union, List, Dict, Tuple, Any
+from typing import Union, List, Dict, Tuple, Any, Optional
 import os
+import re
 
 
 def _make_palette(models:List[str], palette_name:str="Paired") -> Dict[str:str]:
@@ -188,7 +189,7 @@ def plot_cell_type_accuracy(data_frame: pd.DataFrame, configs:Dict[str:Any],
 
 
 
-def normalize_median_rank(data_frame:pd.DataFrame):
+def _normalize_median_rank(data_frame:pd.DataFrame):
 
     data_frame["norm_med_rank"] = (data_frame["MedR"] - data_frame['MedR'].min()) / \
         (data_frame["MedR"].max() - data_frame["MedR"].min())
@@ -207,7 +208,7 @@ def plot_median_rank(data_frame: pd.DataFrame, configs:Dict[str:Any],
         fig = ax.get_figure()
     
     return _plot_boxplot(data_frame, configs, save_dir, ax, 
-                         y_col="cell_type_acc", pre_process=normalize_median_rank)
+                         y_col="cell_type_acc", pre_process=_normalize_median_rank)
 
 
 def compute_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, num_components:int, 
@@ -228,7 +229,7 @@ def compute_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, num_
     return tsne_embs, labels_test
 
 
-def format_cell_types(label:str) -> str:
+def _format_cell_types(label:str) -> str:
 
     label_no_underscore = label.replace("_", "")
     
@@ -244,75 +245,22 @@ def format_cell_types(label:str) -> str:
     return formatted
 
 
-def make_cell_type_map(cell_types_encoded:pd.Categorical):
+def _make_cell_type_map(cell_types_encoded:pd.Categorical):
 
-    mapping = {i:format_cell_types(cat) \
+    mapping = {i:_format_cell_types(cat) \
                for i, cat in enumerate(cell_types_encoded).cat.categories}
     
     return mapping
 
 
-def compute_plot_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, 
-                               configs:dict, save_dir:str=None, ax:plt.Axes=None, **kwargs):
-    
-    configs = configs["tSNE_original"]
-    tsne_reps, labels = compute_tsne_original(mod1_anndata, mod2_anndata, 
-                                              num_components=configs["num_components"], 
-                                              test_size=configs["test_size"])
-    mapping = make_cell_type_map(mod1_anndata.obs["cell_type_encoded"])
-    map_func = np.vectorize(lambda x: mapping[x])
-    labels_mapped = map_func(labels)
-
-    colors = cc.glasbey[:len(np.unique(labels_mapped))]
-
-    if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
-
-    else:
-        fig = ax.get_figure()
-
-    for i, cell_type in enumerate(labels_mapped):
-        mask = labels_mapped == cell_type
-        ax.scatter(tsne_reps[mask, 0], tsne_reps[mask, 1], 
-                    s=0.5, label=f" {cell_type}", color=colors[i])
-        
-    ax.tick_params(axis="both", which="major", labelsize=configs["tick_fonts"])
-
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    ax.subplots_adjust(top=configs["dist_from_top"], 
-                       bottom=configs["dist_from_bottom"], hspace=0)
-    plt.legend(
-        title=configs["title"],
-        title_fontsize=configs["title_fontsize"],
-        bbox_to_anchor=configs["legend_position"],
-        loc=configs["legend_location"],          
-        fontsize=configs["legend_fontsize"], 
-        ncol=configs["legend_num_cols"],                     
-        frameon=configs["is_framed"],
-        handleheight=configs["handleheight"],           
-        markerscale=configs["marker_scale"],
-        columnspacing=configs["column_spacing"],
-        labelspacing=configs["label_spacing"]               
-    )
-
-    out = os.path.join(save_dir, f"tsne_original.{configs['file_type']}")
-    plt.savefig(out, bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    
-    return ax
-
-
-def plot_tsne_original(tsne_original:np.array, seed:int, mod_anndata:ad.AnnData, 
+def plot_tsne_original(tsne_original:np.array, seed:int, original_labels:np.ndarray, 
                        configs:Dict[str:Any], save_dir:str=None, ax:plt.Axes=None, **kwargs):
     
     configs = configs["tSNE_original"]
     test_size = kwargs.get("test_size", 0.3)
-    mapping = make_cell_type_map(mod_anndata.obs["cell_type_encoded"])
+    mapping = _make_cell_type_map(original_labels)
     map_func = np.vectorize(lambda x: mapping[x])
-    labels = mod_anndata.obs["cell_type_encoded"]
-    _, labels_test = train_test_split(labels, test_size=test_size, random_state=seed)
+    _, labels_test = train_test_split(original_labels, test_size=test_size, random_state=seed)
     labels_mapped = map_func(labels_test)
 
     colors = cc.glasbey[:len(np.unique(labels_mapped))]
@@ -364,43 +312,6 @@ def compute_tsne_embs(mod1_embs:np.ndarray, mod2_embs:np.ndarray, num_components
                 init=init).fit_transform(joint_embs)
 
 
-def compute_plot_tsne_embs(mod1_embs:np.ndarray, mod2_embs:np.ndarray, labels:np.ndarray,
-                           configs:Dict[str:Any], save_dir:str=None, ax:plt.Axes=None) -> plt.Axes:
-    
-    configs = configs["tSNE_embs"]
-    colors = cc.glasbey[:len(np.unique(labels))]
-    tsne_embs = compute_tsne_embs(mod1_embs, 
-                                  mod2_embs, 
-                                  num_components=configs["num_components"], 
-                                  init=configs["init_method"], 
-                                  learning_rate=configs["learning_rate"])
-
-    if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
-    
-    else:
-        fig = ax.get_figure()
-
-    for i, cell_type in enumerate(labels):
-        mask = labels == cell_type
-        ax.scatter(tsne_embs[mask, 0], tsne_embs[mask, 1], 
-                    s=0.5, label=f" {cell_type}", color=colors[i])
-        
-    ax.tick_params(axis="both", which="major", labelsize=configs["tick_fonts"])
-
-    ax.spines['top'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-
-    ax.subplots_adjust(top=configs["dist_from_top"], 
-                       bottom=configs["dist_from_bottom"], hspace=0)
-
-    out = os.path.join(save_dir, f"tsne_original.{configs['file_type']}")
-    plt.savefig(out, bbox_inches="tight", pad_inches=0)
-    plt.close(fig)
-    
-    return ax
-
-
 def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str:Any], 
                    save_dir:str=None, ax:plt.Axes=None) -> plt.Axes:
     
@@ -431,49 +342,187 @@ def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str:Any
     plt.close(fig)
     
     return ax
+
+
+def _check_file_extension(file_path:str) -> str:
+    """
+    Extract the file extension from the file path.
+    """
+    _, extenstion = os.path.splitext(file_path)
+
+    return extenstion
+
+
+def _extract_seed(file_path:str) -> int:
+    """
+    Extract the random seed value from the file name. 
+    """
+    file_name = os.path.basename(file_path)
+    match = re.findall(r"\d+", file_name)
+    if match:
+        if match[-1] in range(0, 100, 10):
+            seed = match[-1]
         
+        elif match[-1] in range(1, 11):
+            seed = int(match[-1]) * 10
+    
+    return seed
 
-def plot_all(data_frame: pd.DataFrame,
-             mod1_anndata: ad.AnnData,
-             mod2_anndata: ad.AnnData,
-             mod1_embs: np.ndarray,
-             mod2_embs: np.ndarray,
-             labels: np.ndarray,
-             save_dir: str,
-             configs: Dict[str:Any],
-             is_tsne: bool = True):
-    
-    all_configs = configs["all_plots"]
-    
+
+def _setup_figure(all_configs: Dict[str, Any], plot_tsne: bool) -> Tuple[plt.Figure, Dict[str, Any]]:
+    """
+    Sets up the figure and subplots based on configuration and whether TSNE plots are needed.
+    Returns the figure and a dictionary mapping axes names to Axes objects.
+    """
     fig = plt.figure(figsize=all_configs["fig_size"])
-    if is_tsne:
-        gs = gridspec.GridSpec(nrows=2, ncols=4, figure=fig, 
-                               hspace=all_configs.get("horizontal_space", 0.3), 
-                               wspace=all_configs.get("vertical_space", 0.3))
+    h_space = all_configs.get("horizontal_space", 0.3)
+    w_space = all_configs.get("vertical_space", 0.3)
+    
+    if plot_tsne:
+        gs = gridspec.GridSpec(nrows=2, ncols=4, figure=fig, hspace=h_space, wspace=w_space)
     else:
-        gs = gridspec.GridSpec(nrows=1, ncols=4, figure=fig, 
-                               hspace=all_configs.get("horizontal_space", 0.3), 
-                               wspace=all_configs.get("vertical_space", 0.3))
+        gs = gridspec.GridSpec(nrows=1, ncols=4, figure=fig, hspace=h_space, wspace=w_space)
     
-    ax_top1 = fig.add_subplot(gs[0, 0])
-    ax_top2 = fig.add_subplot(gs[0, 1])
-    ax_top3 = fig.add_subplot(gs[0, 2])
-    ax_top4 = fig.add_subplot(gs[0, 3])
+    axes = {}
+    # Top row plots
+    axes["top1"] = fig.add_subplot(gs[0, 0])
+    axes["top2"] = fig.add_subplot(gs[0, 1])
+    axes["top3"] = fig.add_subplot(gs[0, 2])
+    axes["top4"] = fig.add_subplot(gs[0, 3])
     
-    if is_tsne:
-        ax_bot1 = fig.add_subplot(gs[1, 0:2])
-        ax_bot2 = fig.add_subplot(gs[1, 2:4])
+    if plot_tsne:
+        # Bottom row TSNE plots
+        axes["bot1"] = fig.add_subplot(gs[1, 0:2])
+        axes["bot2"] = fig.add_subplot(gs[1, 2:4])
     
-    plot_recall_at_k(data_frame, configs=configs, save_dir=None, ax=ax_top1)
-    plot_asw(data_frame, configs=configs, save_dir=None, ax=ax_top2)
-    plot_cell_type_accuracy(data_frame, configs=configs, save_dir=None, ax=ax_top3)
-    plot_median_rank(data_frame, configs=configs, save_dir=None, ax=ax_top4)
+    return fig, axes
 
-    if is_tsne:
-        plot_tsne_original(mod1_anndata, mod2_anndata, configs=configs, save_dir=None, ax=ax_bot1)
-        plot_tsne_embs(mod1_embs, mod2_embs, labels, configs=configs, save_dir=None, ax=ax_bot2)
+
+def _process_tsne_and_plot(
+    compute_tsne: bool,
+    plot_tsne: bool,
+    configs: Dict[str, Any],
+    all_configs: Dict[str, Any],
+    axes: Dict[str, Any],
+    tsne_reps_original_file: Optional[str] = None,
+    tsne_reps_embs_file: Optional[str] = None,
+    labels_original_file: Optional[str] = None,
+    mod1_anndata_file: Optional[str] = None,
+    mod2_anndata_file: Optional[str] = None,
+    mod1_embs_file: Optional[str] = None,
+    mod2_embs_file: Optional[str] = None,
+    labels_embs_file: Optional[str] = None,
+    num_components: Optional[int] = None,
+) -> None:
+    """
+    Processes TSNE data. If compute_tsne is True, reads the AnnData and embeddings files,
+    computes TSNE representations, and plots them. Otherwise, it reads TSNE representations from file.
+    """
+    if compute_tsne:
+        # Read AnnData and get original labels
+        mod1_anndata = ad.read_h5ad(mod1_anndata_file)
+        mod2_anndata = ad.read_h5ad(mod2_anndata_file)
+        labels_original = mod1_anndata.obs["cell_type_encoded"].values
+        
+        # Save original labels to CSV (ensure you specify an output file name)
+        labels_original_df = pd.DataFrame(labels_original, columns=["cell_type_encoded"])
+        # Here, you might want to use a provided file name rather than overwriting labels_original_df
+        labels_output_file = labels_original_file if labels_original_file else "labels_original.csv"
+        labels_original_df.to_csv(labels_output_file, index=False)
+
+        # Load embeddings files based on file extension
+        embs_ext = _check_file_extension(mod1_embs_file)
+        if embs_ext == ".npy":
+            mod1_embs = np.load(mod1_embs_file)
+            mod2_embs = np.load(mod2_embs_file)
+            labels_embs = np.load(labels_embs_file)
+        elif embs_ext == ".csv":
+            mod1_embs_df = pd.read_csv(mod1_embs_file)
+            mod2_embs_df = pd.read_csv(mod2_embs_file)
+            labels_embs_df = pd.read_csv(labels_embs_file)
+            mod1_embs = mod1_embs_df.values
+            mod2_embs = mod2_embs_df.values
+            labels_embs = labels_embs_df.values
+        else:
+            raise ValueError("Unsupported embedding file extension.")
+        
+        tsne_original = compute_tsne_original(mod1_anndata, mod2_anndata, num_components)
+        tsne_embs = compute_tsne_embs(mod1_embs, mod2_embs, num_components)
+
+        seed = _extract_seed(mod1_embs_file)
+        plot_tsne_original(tsne_original, seed, labels_original, configs=all_configs, ax=axes["bot1"])
+        plot_tsne_embs(tsne_embs, labels_embs, configs=all_configs, ax=axes["bot2"])
+    else:
+        # When not computing TSNE, read the TSNE representations from files
+        labels_original_df = pd.read_csv(labels_original_file)
+        labels_original = labels_original_df.values
+
+        tsne_ext = _check_file_extension(tsne_reps_original_file)
+        if tsne_ext == ".npy":
+            tsne_original = np.load(tsne_reps_original_file)
+            tsne_embs = np.load(tsne_reps_embs_file)
+            labels_embs = np.load(labels_embs_file)
+        elif tsne_ext == ".csv":
+            tsne_original = pd.read_csv(tsne_reps_original_file).values
+            tsne_embs = pd.read_csv(tsne_reps_embs_file).values
+            labels_embs_df = pd.read_csv(labels_embs_file)
+            labels_embs = labels_embs_df.values
+        else:
+            raise ValueError("Unsupported TSNE file extension.")
+        
+        seed = _extract_seed(tsne_reps_original_file)
+        plot_tsne_original(tsne_original, seed, labels_original, configs=all_configs, ax=axes["bot1"])
+        plot_tsne_embs(tsne_embs, labels_embs, configs=all_configs, ax=axes["bot2"])
+
+
+def plot_all(
+    data_frame: pd.DataFrame,
+    save_dir: str,
+    configs: Dict[str, Any],
+    plot_tsne: bool = True,
+    tsne_reps_original_file: Optional[str] = None,
+    tsne_reps_embs_file: Optional[str] = None,
+    labels_original_file: Optional[str] = None,
+    compute_tsne: bool = False,
+    mod1_anndata_file: Optional[str] = None,
+    mod2_anndata_file: Optional[str] = None,
+    mod1_embs_file: Optional[str] = None,
+    mod2_embs_file: Optional[str] = None,
+    labels_embs_file: Optional[str] = None,
+    num_components: Optional[int] = None,
+) -> None:
+    """
+    Main function to generate all plots.
+    Breaks the work into two main parts: common plots and TSNE plots (if needed).
+    """
+    all_configs = configs["all_plots"]
+
+    fig, axes = _setup_figure(all_configs, plot_tsne)
+
+    plot_recall_at_k(data_frame, configs=configs, save_dir=None, ax=axes["top1"])
+    plot_asw(data_frame, configs=configs, save_dir=None, ax=axes["top2"])
+    plot_cell_type_accuracy(data_frame, configs=configs, save_dir=None, ax=axes["top3"])
+    plot_median_rank(data_frame, configs=configs, save_dir=None, ax=axes["top4"])
+
+    if plot_tsne:
+        _process_tsne_and_plot(
+            compute_tsne,
+            plot_tsne,
+            configs,
+            all_configs,
+            axes,
+            tsne_reps_original_file=tsne_reps_original_file,
+            tsne_reps_embs_file=tsne_reps_embs_file,
+            labels_original_file=labels_original_file,
+            mod1_anndata_file=mod1_anndata_file,
+            mod2_anndata_file=mod2_anndata_file,
+            mod1_embs_file=mod1_embs_file,
+            mod2_embs_file=mod2_embs_file,
+            labels_embs_file=labels_embs_file,
+            num_components=num_components,
+        )
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"all_plots.{all_configs['file_type']}")
-    plt.savefig(out, bbox_inches="tight")
+    out_path = os.path.join(save_dir, f"all_plots.{all_configs['file_type']}")
+    fig.savefig(out_path, bbox_inches="tight")
     plt.close(fig)
