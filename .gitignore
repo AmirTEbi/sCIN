@@ -9,6 +9,7 @@ notebooks/
 sCIN_major_rev/
 results/
 Documentation/
+_configs/
 
 .DS_Store
 .env
