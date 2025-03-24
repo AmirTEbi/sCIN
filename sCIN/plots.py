@@ -253,8 +253,9 @@ def _make_cell_type_map(cell_types_encoded:pd.Categorical):
     return mapping
 
 
-def plot_tsne_original(tsne_original:np.array, seed:int, original_labels:np.ndarray, 
-                       configs:Dict[str, Any], save_dir:str=None, ax:plt.Axes=None, **kwargs):
+def plot_tsne_original(tsne_original:np.array, configs:Dict[str, Any], 
+                       seed:int=None, original_labels:np.ndarray=None, 
+                       save_dir:str=None, ax:plt.Axes=None, **kwargs):
     
     configs = configs["tSNE_original"]
     test_size = kwargs.get("test_size", 0.3)
@@ -344,7 +345,7 @@ def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str, An
     return ax
 
 
-def _check_file_extension(file_path:str) -> str:
+def check_file_extension(file_path:str) -> str:
     """
     Extract the file extension from the file path.
     """
@@ -431,7 +432,7 @@ def _process_tsne_and_plot(
         labels_original_df.to_csv(labels_output_file, index=False)
 
         # Load embeddings files based on file extension
-        embs_ext = _check_file_extension(mod1_embs_file)
+        embs_ext = check_file_extension(mod1_embs_file)
         if embs_ext == ".npy":
             mod1_embs = np.load(mod1_embs_file)
             mod2_embs = np.load(mod2_embs_file)
@@ -449,15 +450,15 @@ def _process_tsne_and_plot(
         tsne_original, labels_original_test = compute_tsne_original(mod1_anndata, mod2_anndata, num_components)
         tsne_embs = compute_tsne_embs(mod1_embs, mod2_embs, num_components)
 
-        seed = _extract_seed(mod1_embs_file)
-        plot_tsne_original(tsne_original, seed, labels_original_test, configs=all_configs, ax=axes["bot1"])
+        # seed = _extract_seed(mod1_embs_file)
+        plot_tsne_original(tsne_original, configs=all_configs, original_labels=labels_original_test, ax=axes["bot1"])
         plot_tsne_embs(tsne_embs, labels_embs, configs=all_configs, ax=axes["bot2"])
     else:
         # When not computing TSNE, read the TSNE representations from files
         labels_original_df = pd.read_csv(labels_original_file)
         labels_original = labels_original_df.values
 
-        tsne_ext = _check_file_extension(tsne_reps_original_file)
+        tsne_ext = check_file_extension(tsne_reps_original_file)
         if tsne_ext == ".npy":
             tsne_original = np.load(tsne_reps_original_file)
             tsne_embs = np.load(tsne_reps_embs_file)
@@ -470,8 +471,8 @@ def _process_tsne_and_plot(
         else:
             raise ValueError("Unsupported TSNE file extension.")
         
-        seed = _extract_seed(tsne_reps_original_file)
-        plot_tsne_original(tsne_original, seed, labels_original, configs=all_configs, ax=axes["bot1"])
+        # seed = _extract_seed(tsne_reps_original_file)
+        plot_tsne_original(tsne_original, 0, labels_original, configs=all_configs, ax=axes["bot1"])
         plot_tsne_embs(tsne_embs, labels_embs, configs=all_configs, ax=axes["bot2"])
 
 
