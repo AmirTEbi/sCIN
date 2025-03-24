@@ -72,7 +72,7 @@ def _draw_legend(ax:plt.Axes, location:str, position:Tuple[float, float], title:
     return ax
 
 
-def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str:Any], 
+def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str, Any], 
                      save_dir:str=None, ax:plt.Axes=None):
     
     configs = configs["recall_at_k"]
@@ -124,7 +124,7 @@ def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str:Any],
     return ax
 
 
-def _plot_boxplot(data_frame:pd.DataFrame, configs:Dict[str:Any], save_dir:str, ax:plt.Axes,
+def _plot_boxplot(data_frame:pd.DataFrame, configs:Dict[str, Any], save_dir:str, ax:plt.Axes,
                   y_col:str, pre_process:callable=None) -> plt.Axes:
     """
     A helper function to draw a boxplot.
@@ -161,7 +161,7 @@ def _plot_boxplot(data_frame:pd.DataFrame, configs:Dict[str:Any], save_dir:str, 
     return ax
 
 
-def plot_asw(data_frame: pd.DataFrame, configs:Dict[str:Any], 
+def plot_asw(data_frame: pd.DataFrame, configs:Dict[str, Any], 
              save_dir: str = None, ax: plt.Axes = None):
     """
    
@@ -197,7 +197,7 @@ def _normalize_median_rank(data_frame:pd.DataFrame):
     return data_frame
     
 
-def plot_median_rank(data_frame: pd.DataFrame, configs:Dict[str:Any], 
+def plot_median_rank(data_frame: pd.DataFrame, configs:Dict[str, Any], 
                      save_dir:str=None, ax:plt.Axes=None):
 
     configs = configs["cell_type_accuracy"]
@@ -254,7 +254,7 @@ def _make_cell_type_map(cell_types_encoded:pd.Categorical):
 
 
 def plot_tsne_original(tsne_original:np.array, seed:int, original_labels:np.ndarray, 
-                       configs:Dict[str:Any], save_dir:str=None, ax:plt.Axes=None, **kwargs):
+                       configs:Dict[str, Any], save_dir:str=None, ax:plt.Axes=None, **kwargs):
     
     configs = configs["tSNE_original"]
     test_size = kwargs.get("test_size", 0.3)
@@ -312,7 +312,7 @@ def compute_tsne_embs(mod1_embs:np.ndarray, mod2_embs:np.ndarray, num_components
                 init=init).fit_transform(joint_embs)
 
 
-def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str:Any], 
+def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str, Any], 
                    save_dir:str=None, ax:plt.Axes=None) -> plt.Axes:
     
     configs = configs["tSNE_embs"]
@@ -446,11 +446,11 @@ def _process_tsne_and_plot(
         else:
             raise ValueError("Unsupported embedding file extension.")
         
-        tsne_original = compute_tsne_original(mod1_anndata, mod2_anndata, num_components)
+        tsne_original, labels_original_test = compute_tsne_original(mod1_anndata, mod2_anndata, num_components)
         tsne_embs = compute_tsne_embs(mod1_embs, mod2_embs, num_components)
 
         seed = _extract_seed(mod1_embs_file)
-        plot_tsne_original(tsne_original, seed, labels_original, configs=all_configs, ax=axes["bot1"])
+        plot_tsne_original(tsne_original, seed, labels_original_test, configs=all_configs, ax=axes["bot1"])
         plot_tsne_embs(tsne_embs, labels_embs, configs=all_configs, ax=axes["bot2"])
     else:
         # When not computing TSNE, read the TSNE representations from files
