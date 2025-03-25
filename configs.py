@@ -42,7 +42,8 @@ plots = {
     "recall_at_k":{
 
         "file_type":"pdf",
-        "fig_size":(6, 4),
+        "fig_width":8,
+        "fig_height":6,
         "err_bar_format":"-",
         "err_bar_capsize":5,
         "err_bar_capthick":1,
@@ -56,7 +57,7 @@ plots = {
             "scBridge":"scBridge"
         },
         "legend_location":"lower center",
-        "legend_position":(0.2, 0.62),
+        "legend_position":(0.2, 0.54),
         "legend_title":"",
         "legend_num_cols":1,
         "legend_fontsize":18,
@@ -67,19 +68,20 @@ plots = {
         "xticks_positions":[10, 20, 30, 40, 50],
         "xticks_fontsize":18,
         "yticks_fontsize":18,
-        "y_axis_range":(0, 0.32)
+        "y_axis_range":(0, 0.40)
 
     },
 
     "ASW":{
 
         "file_type":"pdf",
-        "fig_size":(6, 4),
+        "fig_width":8,
+        "fig_height":6,
         "x_axis_label":"",
         "y_axis_label":"ASW",
+        "y_axis_label_fontsize":20,
         "y_label_fontsize":20,
-        "y_label_fontsize":20,
-        "xticks_position":[0, 1, 2, 3, 4, 5],
+        "xticks_positions":[0, 1, 2, 3, 4, 5],
         "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge"],
         "xticks_fontsize":18,
         "xticks_rotation":45,
@@ -91,12 +93,13 @@ plots = {
     "cell_type_accuracy":{
 
         "file_type":"pdf",
-        "fig_size":(6, 4),
+        "fig_width":8,
+        "fig_height":6,
         "x_axis_label":"",
         "y_axis_label":"Cell Type Accuracy",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_position":[0, 1, 2, 3, 4, 5],
+        "xticks_positions":[0, 1, 2, 3, 4, 5],
         "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge"],
         "xticks_fontsize":18,
         "xticks_rotation":45,
@@ -107,12 +110,13 @@ plots = {
     "median_rank":{
 
         "file_type":"pdf",
-        "fig_size":(6, 4),
+        "fig_width":8,
+        "fig_height":6,
         "x_axis_label":"",
         "y_axis_label":"Normalized Median Rank",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_position":[0, 1, 2, 3, 4, 5],
+        "xticks_positions":[0, 1, 2, 3, 4, 5],
         "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge"],
         "xticks_fontsize":18,
         "xticks_rotation":45,
@@ -123,7 +127,8 @@ plots = {
     "tSNE_original":{
         
         "file_type":"pdf",
-        "fig_size":(12, 8),
+        "fig_width":12,
+        "fig_height":8,
         "num_components":2,
         "init_method":"random",
         "learning_rate":"auto",
@@ -149,7 +154,8 @@ plots = {
     "tSNE_embs":{
 
         "file_type":"pdf",
-        "fig_size":(12, 8),
+        "fig_width":12,
+        "fig_height":8,
         "num_components":2,
         "init_method":"random",
         "learning_rate":"auto",
@@ -165,7 +171,8 @@ plots = {
 
     "all_plots":{
 
-        "fig_size":(),
+        "fig_width":"",
+        "fig_height":"",
         "horizontal_space":0.3,
         "vertical_space":0.3,
         

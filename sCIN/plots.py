@@ -14,7 +14,7 @@ import os
 import re
 
 
-def _make_palette(models:List[str], palette_name:str="Paired") -> Dict[str:str]:
+def _make_palette(models:List[str], palette_name:str="Paired") -> Dict[str,str]:
 
     palette = sns.color_palette(palette_name, len(models))
     
@@ -22,7 +22,7 @@ def _make_palette(models:List[str], palette_name:str="Paired") -> Dict[str:str]:
 
 
 def _group_data(data_frame:pd.DataFrame, based_on:Union[str, list], 
-               select_col:Union[str, list]=None) -> pd.core.groupby.generic.DataFrameGroupBy:
+               select_col:Union[str, list]=None): 
 
     if select_col is not None:
         return data_frame.groupby(based_on)[select_col]
@@ -36,8 +36,8 @@ def _compute_stats_on_grouped_data(grouped_data:pd.DataFrame, stats:Union[str, l
     return grouped_data.agg(stats).reset_index()
 
 
-def _draw_err_bars(ax:plt.Axes, grouped_data:pd.DataFrame, category:str, x:str, y:str, colors=Dict[str:str], 
-                  err_range:str="std", bar_format:str="-", capsize:int=5, capthick:int=1, linewidth:int=2) -> plt.Axes:
+def _draw_err_bars(ax:plt.Axes, grouped_data:pd.DataFrame, category:str, x:str, y:str, colors=Dict[str,str], 
+                   err_range:str="std", bar_format:str="-", capsize:int=5, capthick:int=1, linewidth:int=2) -> plt.Axes:
 
     for item in grouped_data[category].unique():
         item_df = grouped_data[grouped_data[category] == item]
@@ -47,8 +47,8 @@ def _draw_err_bars(ax:plt.Axes, grouped_data:pd.DataFrame, category:str, x:str, 
     return ax
 
 
-def _handle_legend(grouped_data:pd.DataFrame, based_on:str, colors=Dict[str:str], 
-                   legend_names:Dict[str:str]=None, linewidth:int=4) -> list:
+def _handle_legend(grouped_data:pd.DataFrame, based_on:str, colors=Dict[str,str], 
+                   legend_names:Dict[str,str]=None, linewidth:int=4) -> list:
 
     legend_handles = [
         Line2D(
@@ -77,7 +77,7 @@ def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str, Any],
     
     configs = configs["recall_at_k"]
     if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
 
     else:
         fig = ax.get_figure()
@@ -93,7 +93,8 @@ def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str, Any],
                         capsize=configs["err_bar_capsize"], capthick=configs["err_bar_capthick"], 
                         linewidth=configs["err_bar_linewidth"])
     
-    ax = _draw_legend(location=configs["legend_location"],
+    ax = _draw_legend(ax=ax,
+                      location=configs["legend_location"],
                       position=configs["legend_position"],
                       title=configs["legend_title"],
                       num_cols=configs["legend_num_cols"],
@@ -168,7 +169,7 @@ def plot_asw(data_frame: pd.DataFrame, configs:Dict[str, Any],
     """
     configs = configs["ASW"]
     if ax is None:
-        fig, ax = plt.subplots(figsize=configs["fig_size"])
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
     
     else:
         fig = ax.get_figure()
@@ -178,20 +179,19 @@ def plot_asw(data_frame: pd.DataFrame, configs:Dict[str, Any],
     return ax
     
 
-def plot_cell_type_accuracy(data_frame: pd.DataFrame, configs:Dict[str:Any], 
+def plot_cell_type_accuracy(data_frame: pd.DataFrame, configs:Dict[str, Any], 
                             save_dir:str=None, ax:plt.Axes=None):
 
     configs = configs["cell_type_accuracy"]
     if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
     
     return _plot_boxplot(data_frame, configs, save_dir, ax, y_col="cell_type_acc")
 
 
-
 def _normalize_median_rank(data_frame:pd.DataFrame):
 
-    data_frame["norm_med_rank"] = (data_frame["MedR"] - data_frame['MedR'].min()) / \
+    data_frame["norm_med_rank"] = (data_frame["MedR"] - data_frame["MedR"].min()) / \
         (data_frame["MedR"].max() - data_frame["MedR"].min())
     
     return data_frame
@@ -202,17 +202,18 @@ def plot_median_rank(data_frame: pd.DataFrame, configs:Dict[str, Any],
 
     configs = configs["cell_type_accuracy"]
     if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
 
     else:
         fig = ax.get_figure()
     
     return _plot_boxplot(data_frame, configs, save_dir, ax, 
-                         y_col="cell_type_acc", pre_process=_normalize_median_rank)
+                         y_col="MedR", pre_process=_normalize_median_rank)
 
 
-def compute_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, num_components:int, 
-                          test_size:float=0.3, init:str="random", learning_rate:Union[str, float]="auto") -> np.ndarray:
+def compute_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, 
+                          num_components:int, test_size:float=0.3, 
+                          init:str="random", learning_rate:Union[str, float]="auto") -> Tuple[np.ndarray, np.ndarray]:
 
     mod1_counts = mod1_anndata.layers["norm_raw_counts"]
     mod2_counts = mod2_anndata.layers["norm_raw_counts"]
@@ -266,7 +267,7 @@ def plot_tsne_original(tsne_original:np.array, configs:Dict[str, Any],
 
     colors = cc.glasbey[:len(np.unique(labels_mapped))]
     if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
 
     else:
         fig = ax.get_figure()
@@ -320,7 +321,7 @@ def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str, An
     colors = cc.glasbey[:len(np.unique(labels))]
 
     if ax is None:
-        fig, ax = plt.subplots(configs["fig_size"])
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
     
     else:
         fig = ax.get_figure()
@@ -361,13 +362,13 @@ def _extract_seed(file_path:str) -> int:
     file_name = os.path.basename(file_path)
     match = re.findall(r"\d+", file_name)
     if match:
-        if match[-1] in range(0, 100, 10):
-            seed = match[-1]
-        
-        elif match[-1] in range(1, 11):
-            seed = int(match[-1]) * 10
-    
-    return seed
+        num = int(match[-1])
+        if num in range(0, 100, 10):
+            seed = num
+        elif num in range(1, 11):
+            seed = num * 10
+
+        return seed
 
 
 def _setup_figure(all_configs: Dict[str, Any], plot_tsne: bool) -> Tuple[plt.Figure, Dict[str, Any]]:
@@ -375,7 +376,7 @@ def _setup_figure(all_configs: Dict[str, Any], plot_tsne: bool) -> Tuple[plt.Fig
     Sets up the figure and subplots based on configuration and whether TSNE plots are needed.
     Returns the figure and a dictionary mapping axes names to Axes objects.
     """
-    fig = plt.figure(figsize=all_configs["fig_size"])
+    fig = plt.figure(all_configs["fig_width"], all_configs["fig_height"])
     h_space = all_configs.get("horizontal_space", 0.3)
     w_space = all_configs.get("vertical_space", 0.3)
     
@@ -490,7 +491,6 @@ def plot_all(
     mod1_embs_file: Optional[str] = None,
     mod2_embs_file: Optional[str] = None,
     labels_embs_file: Optional[str] = None,
-    num_components: Optional[int] = None,
 ) -> None:
     """
     Main function to generate all plots.
@@ -520,7 +520,7 @@ def plot_all(
             mod1_embs_file=mod1_embs_file,
             mod2_embs_file=mod2_embs_file,
             labels_embs_file=labels_embs_file,
-            num_components=num_components,
+            num_components=configs["tSNE_embs"]["num_components"],
         )
 
     plt.tight_layout()
