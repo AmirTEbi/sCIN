@@ -20,7 +20,7 @@ def five_fold_split_dataset(
     
     # if not seed is None:
     #     setup_seed(seed)
-    
+    random.seed(seed)
     temp = [i for i in range(len(RNA_data.obs_names))]
     random.shuffle(temp)
     
@@ -47,7 +47,7 @@ def main() -> None:
     parser.add_argument("--rna_file", type=str)
     parser.add_argument("--atac_file", type=str)
     parser.add_argument("--save_dir", type=str)
-    parser.add_argument("--num_reps", type=int)  # max 10
+    parser.add_argument("--num_reps", type=int, choices=range(1, 11), help="Number of replication(1-10)")
     parser.add_argument("--is_inv_metrics", action="store_true")
     args = parser.parse_args()
 
@@ -79,7 +79,7 @@ def main() -> None:
         # Make a chrom list. For more information, please see: https://scbutterfly.readthedocs.io/en/latest/Tutorial/RNA_ATAC_paired_prediction/RNA_ATAC_paired_scButterfly-B.html
         chrom_list = []
         last_one = ""
-        for i in range(butterfly.ATAC_data.var.chrom):
+        for i in range(len(butterfly.ATAC_data.var.chrom)):
             temp = butterfly.ATAC_data_p.var.chrom[i]
             if temp[0 : 3] == 'chr':
                 if not temp == last_one:
@@ -90,7 +90,7 @@ def main() -> None:
             else:
                 chrom_list[-1] += 1
         
-        print(f"Total number of peaks: {sum(chrom_list)}")
+        logging.info(f"Total number of peaks: {sum(chrom_list)}")
 
         # Construct the model
         butterfly.construct_model(chrom_list=chrom_list)
@@ -107,17 +107,17 @@ def main() -> None:
         print(f"Shape of the ATAC to RNA pred: {A2R_predict.shape}")
         print(f"Shape of the RNA to ATAC pred: {R2A_predict.shape}")
         labels = RNA_data.obs["cell_type_encoded"].values
-        lables_test = labels[test_id, :]
+        labels_test = labels[test_id]
 
         # Evaluations
         recall_at_k_a2r, num_pairs_a2r, cell_type_acc_a2r, asw, medr_a2r = assess(R2A_predict,
                                                                                   A2R_predict,
-                                                                                  lables_test,
+                                                                                  labels_test,
                                                                                   seed=seed)
         if args.is_inv_metrics:
             recall_at_k_r2a, num_pairs_r2a, cell_type_acc_r2a, _, medr_r2a = assess(A2R_predict,
                                                                                     R2A_predict,
-                                                                                    lables_test,
+                                                                                    labels_test,
                                                                                     seed=seed)
         for k, v_a2r in recall_at_k_a2r.items():
             v_r2a = recall_at_k_r2a.get(k, 0)
@@ -138,10 +138,9 @@ def main() -> None:
     
     results = pd.DataFrame(res)
     res_save_dir = os.path.join(args.save_dir, "outs")
-    if not os.path.exists(res_save_dir):
-        os.makedirs(res_save_dir)
+    os.makedirs(model_save_dir, exist_ok=True)
     
-    results.to_csv(os.path.join(res_save_dir), f"metrics_scButterfly_{args.num_reps}reps.csv")
+    results.to_csv(os.path.join(res_save_dir, f"metrics_scButterfly_{args.num_reps}reps.csv"), index=False)
     logging.info(f"scButterfly results saved to {res_save_dir}.")
 
 
