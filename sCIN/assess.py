@@ -155,6 +155,23 @@ def compute_norm_ASW(joint_embs:np.array, labels:np.array, seed=None) -> float:
    return (silhouette_score(joint_embs, labels, random_state=seed) + 1) / 2
 
 
+def compute_MedR(mod1_embs:np.ndarray, mod2_embs:np.ndarray) -> float:
+   """
+   Compute Median Rank metric between two embedding matrices.
+
+   Parameters
+   ----------
+
+   """
+   sum_embs1 = np.sum(mod1_embs**2, axis=1)[:, np.newaxis]
+   sum_embs2 = np.sum(mod2_embs**2, axis=1)[:, np.newaxis]
+   dists = sum_embs1 + sum_embs2 - 2 * np.dot(mod1_embs, mod2_embs.T)
+   diag_dists = np.diag(dists)
+   ranks = np.sum(dists < diag_dists[:, np.newaxis], axis=1)
+
+   return np.median(ranks)
+
+
 def assess(mod1_embs:np.array, mod2_embs:np.array, 
            labels:np.array, seed:int=None) -> tuple[dict, int, float, float]:
    
@@ -166,8 +183,9 @@ def assess(mod1_embs:np.array, mod2_embs:np.array,
 
    joint_embs = np.column_stack((mod1_embs, mod2_embs))
    asw = compute_norm_ASW(joint_embs, labels, seed=seed)
+   medr = compute_MedR(mod1_embs=mod1_embs, mod2_embs=mod2_embs)
 
-   return recall_at_k, num_pairs, cell_type_acc, asw
+   return recall_at_k, num_pairs, cell_type_acc, asw, medr
 
 
 def assess_joint(joint_embs:np.ndarray, labels:np.ndarray, 
