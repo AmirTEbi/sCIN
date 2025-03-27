@@ -1,5 +1,4 @@
 from scButterfly.butterfly import Butterfly
-from Butterfly.split_datasets import *
 from ..sCIN.assess import assess
 import anndata as ad 
 import torch
