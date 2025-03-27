@@ -1,9 +1,11 @@
 from scButterfly.butterfly import Butterfly
 from ..sCIN.assess import assess
 import anndata as ad 
+import pandas as pd
 import torch
 import random
 import argparse
+import logging
 import os
 
 
@@ -104,18 +106,43 @@ def main() -> None:
         A2R_predict, R2A_predict = butterfly.test_model()
         print(f"Shape of the ATAC to RNA pred: {A2R_predict.shape}")
         print(f"Shape of the RNA to ATAC pred: {R2A_predict.shape}")
+        labels = RNA_data.obs["cell_type_encoded"].values
+        lables_test = labels[test_id, :]
 
         # Evaluations
-        recall_at_k, num_pairs, cell_type_acc, asw = assess(A2R_predict,
-                                                            R2A_predict,
-                                                            )
-
-
-
-
-
-
-
+        recall_at_k_a2r, num_pairs_a2r, cell_type_acc_a2r, asw, medr_a2r = assess(R2A_predict,
+                                                                                  A2R_predict,
+                                                                                  lables_test,
+                                                                                  seed=seed)
+        if args.is_inv_metrics:
+            recall_at_k_r2a, num_pairs_r2a, cell_type_acc_r2a, _, medr_r2a = assess(A2R_predict,
+                                                                                    R2A_predict,
+                                                                                    lables_test,
+                                                                                    seed=seed)
+        for k, v_a2r in recall_at_k_a2r.items():
+            v_r2a = recall_at_k_r2a.get(k, 0)
+            res.append({
+                "Models":"scButterfly",
+                "Replicates":i+1,
+                "k":k,
+                "Recall_at_k_a2r":v_a2r,
+                "Recall_at_k_r2a":v_r2a,
+                "num_pairs_a2r":num_pairs_a2r,
+                "num_pairs_r2a":num_pairs_r2a if num_pairs_r2a is not None else 0.0,
+                "cell_type_acc_a2r":cell_type_acc_a2r,
+                "cell_type_acc_r2a":cell_type_acc_r2a if cell_type_acc_r2a is not None else 0.0,
+                "cell_type_ASW":asw,
+                "MedR_a2r":medr_a2r,
+                "MedR_r2a":medr_r2a if medr_r2a is not None else 0.0
+            })
+    
+    results = pd.DataFrame(res)
+    res_save_dir = os.path.join(args.save_dir, "outs")
+    if not os.path.exists(res_save_dir):
+        os.makedirs(res_save_dir)
+    
+    results.to_csv(os.path.join(res_save_dir), f"metrics_scButterfly_{args.num_reps}reps.csv")
+    logging.info(f"scButterfly results saved to {res_save_dir}.")
 
 
 if __name__ == "__main__":
