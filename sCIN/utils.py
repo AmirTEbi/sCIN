@@ -49,8 +49,6 @@ def setup_logging(level:str,
           
      logging.info(f"Logs will be saved to {log_file}.")
 
-     return logging
-
 
 def impute_cells(labels):
     """Make same-size label arrays
