@@ -20,7 +20,7 @@ import os
 
 def setup_logging(level:str, 
                   log_dir:str,
-                  model_name:str) -> None:
+                  model_name:str) -> object:
      
      os.makedirs(log_dir, exist_ok=True)
      log_file = os.path.join(log_dir, f"{model_name}.log")
@@ -48,6 +48,8 @@ def setup_logging(level:str,
                                         logging.StreamHandler()])
           
      logging.info(f"Logs will be saved to {log_file}.")
+
+     return logging
 
 
 def impute_cells(labels):
