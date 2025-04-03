@@ -327,14 +327,14 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     mod1_encoder.to(device)
     mod2_encoder = Mod2Encoder(mod2_train_t.shape[1], hidden_dim, latent_dim)
     mod2_encoder.to(device)
-    cool = sCIN(mod1_encoder, mod2_encoder, t)
-    cool.to(device)
-    optimizer = Adam(cool.parameters(), lr=lr)
+    sCIN = sCIN(mod1_encoder, mod2_encoder, t)
+    sCIN.to(device)
+    optimizer = Adam(sCIN.parameters(), lr=lr)
     
     best_loss = float('inf')
     patience_counter = 0
     for epoch in range(epochs):
-        cool.train()
+        sCIN.train()
         epoch_loss = 0.0
         total_samples = 0
         total_batches = len(imputed_cell_types2[0])
@@ -362,7 +362,7 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
             mod2_batch = torch.vstack(mod2_batch)
             #print(mod2_batch)
 
-            logits, _, _ = cool(mod1_batch, mod2_batch)
+            logits, _, _ = sCIN(mod1_batch, mod2_batch)
             block_size = num_classes
             losses = []
             for b in range(bob):
@@ -393,12 +393,11 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
                 break
 
     model_dir = os.path.join(save_dir, "models")
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+    os.makedirs(model_dir, exist_ok=True)
 
-    torch.save(cool.state_dict(), os.path.join(model_dir, f"sCIN_{seed}"))
+    torch.save(sCIN.state_dict(), os.path.join(model_dir, f"sCIN_rep{seed}.pth"))
 
-    train_dict = {"model":cool}
+    train_dict = {"model":sCIN}
     if is_pca:
         train_dict["pca_mod1"] = pca_mod1
         train_dict["pca_mod2"] = pca_mod2
