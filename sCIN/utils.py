@@ -14,48 +14,40 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import anndata as ad
 from typing import Any, Tuple, Dict
+import logging
 import os
 
 
-def append_rows_has_inverse(results_list:list, replication:int, 
-                            recall_at_k_12:Dict[int, float], num_pairs_12:int, 
-                            cell_type_acc_12:float, asw:float, **kwargs) -> list:
+def setup_logging(level:str, 
+                  log_dir:str,
+                  model_name:str) -> None:
      
-     if kwargs["has_inverse"]:
-          for k, r_at_k12 in recall_at_k_12.items():
-               r_at_k21 = kwargs["recall_at_k21"].get(k, 0)
-               results_list.append({
-                    "Models":"MOFA",
-                    "Replicates":replication+1,
-                    "k":k,
-                    "Recall_at_k":r_at_k12,
-                    "Recall_at_k_inv":r_at_k21,
-                    "num_pairs":num_pairs_12,
-                    "num_pairs_inv":kwargs["num_pairs_21"],
-                    "cell_type_acc":cell_type_acc_12,
-                    "cell_type_acc_inv":kwargs["cell_type_acc_21"],
-                    "cell_type_ASW":asw
-               })
+     os.makedirs(log_dir, exist_ok=True)
+     log_file = os.path.join(log_dir, f"{model_name}.log")
+
+     if level == "info":
+          logging.basicConfig(level=logging.INFO,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+     elif level == "debug":
+          logging.basicConfig(level=logging.DEBUG,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+     elif level == "warning":
+          logging.basicConfig(level=logging.WARNING,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
      
-     return results_list
-
-
-def append_rows(results_list:list, replication:int, 
-                recall_at_k_12:Dict[int, float], num_pairs_12:int, 
-                cell_type_acc_12:float, asw:float) -> list:
-     
-     for k, r_at_k12 in recall_at_k_12.items():
-          results_list.append({
-               "Models":"MOFA",
-               "Replicates":replication+1,
-               "k":k,
-               "Recall_at_k":r_at_k12,
-               "num_pairs":num_pairs_12,
-               "cell_type_acc":cell_type_acc_12,
-               "cell_type_ASW":asw
-          })
-
-     return results_list
+     elif level == "error":
+          logging.basicConfig(level=logging.ERROR,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+          
+     logging.info(f"Logs will be saved to {log_file}.")
 
 
 def impute_cells(labels):
