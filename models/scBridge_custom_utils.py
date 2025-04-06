@@ -4,6 +4,7 @@ import importlib.metadata
 import pyranges as pr
 import anndata as ad
 from scipy.sparse import csr_matrix
+from typing import Tuple
 
 def extend_to_promoter(gtf_df: pd.DataFrame) -> pd.DataFrame:
     """Extend genomic regions to promoters."""
@@ -15,7 +16,7 @@ def extend_to_promoter(gtf_df: pd.DataFrame) -> pd.DataFrame:
     return gtf_df[["Chromosome", "Start", "End", "gene_name"]]
 
 
-def compute_gene_activity(atac: ad.AnnData, gtf_path: str) -> (np.ndarray, list):
+def compute_gene_activity(atac: ad.AnnData, gtf_path: str) -> Tuple[np.ndarray, list]:
     """Compute gene activity matrix by mapping ATAC peaks to gene body + promoter."""
 
     std_chrs = {f'chr{i}' for i in range(1, 23)} | {"chrX", "chrY", "chrM"}
@@ -98,7 +99,7 @@ def center_data(array: np.array) -> np.array:
     return (array - mean) / np.maximum(std, 1e-9)  
 
 
-def preprocess(rna: ad.AnnData, atac: ad.AnnData, gtf_file: str) -> (ad.AnnData, ad.AnnData):
+def preprocess(rna: ad.AnnData, atac: ad.AnnData, gtf_file: str) -> Tuple[ad.AnnData, ad.AnnData]:
     """Preprocess ATAC and RNA data for integration ensuring shared features."""
     
     gene_act_mat, genes = compute_gene_activity(atac, gtf_file)
