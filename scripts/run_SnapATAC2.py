@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import anndata as ad
 from sCIN.assess import assess_joint
-from ..sCIN import assess_joint
 import argparse
 import os
 
