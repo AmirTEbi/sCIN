@@ -127,7 +127,7 @@ def assess(mod1_embs:np.array, mod2_embs:np.array,
 
 
 def assess_joint(joint_embs:np.ndarray, labels:np.ndarray, 
-                 seed:int=None, k:int=1) -> tuple[float, float]:
+                 seed:int=None, k:int=1) -> Tuple[float, float]:
    
    dist_matrix = compute_joint_distance(joint_embs)
    closest_cells = select_k_closest(dist_matrix, k)
