@@ -6,15 +6,14 @@ from sklearn.decomposition import PCA
 from sklearn.cross_decomposition import CCA
 
 
-def train_hm(rna_train, atac_train, labels_train=None, epochs=None,
-                settings=None, device=None):
+def train_hramony(rna_train, atac_train, settings=None):
     """
 
     Parameters
     ----------
 
     """
-
+    
     # PCA transformations
     print("PCA starts ...")
     pca_rna = PCA(n_components=settings["PCs"])
@@ -49,26 +48,22 @@ def train_hm(rna_train, atac_train, labels_train=None, epochs=None,
 
     vars_use = ["mode"]
 
-    hm_train = hm.run_harmony(data, meta_data, vars_use=vars_use, max_iter_harmony=epochs)
+    hm_train = hm.run_harmony(data, meta_data, vars_use=vars_use, 
+                              max_iter_harmony=settings["max_iter_harmony"])
     
     return [hm_train, pca_rna, pca_atac, cca]
 
 
-def get_emb_hm(rna_test, atac_test, labels_test=None, obj_list=None, save_dir=None, 
-                                             seed=None, device=None):
+def get_emb_harmony(rna_test, atac_test, model, pca_mod1, pca_mod2, cca):
     """
 
     Parameters
     ----------
     
     """
-    model = obj_list[0]
-    pca_rna = obj_list[1]
-    pca_atac = obj_list[2]
-    cca = obj_list[3]
     
-    rna_test = pca_rna.transform(rna_test)
-    atac_test = pca_atac.transform(atac_test)
+    rna_test = pca_mod1.transform(rna_test)
+    atac_test = pca_mod2.transform(atac_test)
     
     rna_test_C = cca.transform(rna_test)
     atac_test_C = cca.transform(atac_test)

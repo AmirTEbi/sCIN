@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -121,18 +122,19 @@ class sCIN(nn.Module):
 
 
 def train_sCIN(mod1_train: np.array, mod2_train: np.array, 
-               labels_train: list, epochs: int, settings: dict, 
+               labels_train: list, settings: dict, 
                **kwargs) -> dict:
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    epochs = settings["epochs"]
     t = settings.get("t", 0.07)
-    lr = settings.get("lr", 1e-3)
+    lr = settings.get("learning_rate", 1e-3)
     hidden_dim = settings.get("hidden_dim", 256)
     latent_dim = settings.get("latent_dim", 128)
     bob = settings.get("bob", 10)
     save_dir = kwargs["save_dir"]
-    seed = kwargs["seed"]
+    rep = kwargs["replication"]
     is_pca = kwargs["is_pca"]
     patience = settings.get("patience", 10)
     min_delta = settings.get("min_delta", 1e-4)
@@ -225,7 +227,7 @@ def train_sCIN(mod1_train: np.array, mod2_train: np.array,
     model_dir = os.path.join(save_dir, "models")
     if not os.path.exists(model_dir):
         os.makedirs(model_dir)
-    torch.save(scin.state_dict(), os.path.join(model_dir, f"sCIN_{seed}"))
+    torch.save(scin.state_dict(), os.path.join(model_dir, f"sCIN_{rep}"))
 
     train_dict = {"model":scin}
     if is_pca:
@@ -325,14 +327,14 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     mod1_encoder.to(device)
     mod2_encoder = Mod2Encoder(mod2_train_t.shape[1], hidden_dim, latent_dim)
     mod2_encoder.to(device)
-    cool = sCIN(mod1_encoder, mod2_encoder, t)
-    cool.to(device)
-    optimizer = Adam(cool.parameters(), lr=lr)
+    sCIN = sCIN(mod1_encoder, mod2_encoder, t)
+    sCIN.to(device)
+    optimizer = Adam(sCIN.parameters(), lr=lr)
     
     best_loss = float('inf')
     patience_counter = 0
     for epoch in range(epochs):
-        cool.train()
+        sCIN.train()
         epoch_loss = 0.0
         total_samples = 0
         total_batches = len(imputed_cell_types2[0])
@@ -360,7 +362,7 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
             mod2_batch = torch.vstack(mod2_batch)
             #print(mod2_batch)
 
-            logits, _, _ = cool(mod1_batch, mod2_batch)
+            logits, _, _ = sCIN(mod1_batch, mod2_batch)
             block_size = num_classes
             losses = []
             for b in range(bob):
@@ -391,12 +393,11 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
                 break
 
     model_dir = os.path.join(save_dir, "models")
-    if not os.path.exists(model_dir):
-        os.makedirs(model_dir)
+    os.makedirs(model_dir, exist_ok=True)
 
-    torch.save(cool.state_dict(), os.path.join(model_dir, f"sCIN_{seed}"))
+    torch.save(sCIN.state_dict(), os.path.join(model_dir, f"sCIN_rep{seed}.pth"))
 
-    train_dict = {"model":cool}
+    train_dict = {"model":sCIN}
     if is_pca:
         train_dict["pca_mod1"] = pca_mod1
         train_dict["pca_mod2"] = pca_mod2
@@ -405,13 +406,15 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
 
         
 def get_emb_sCIN(mod1_test, mod2_test, labels_test, 
-                   train_dict, save_dir, **kwargs):
+                 train_dict, save_dir, **kwargs):
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = train_dict["model"]
     seed = kwargs["seed"]
     is_pca = kwargs["is_pca"]
+
+    rep = kwargs.get("rep", 0)
 
     if is_pca:
         print("PCA transformation of test data ...")
@@ -442,9 +445,7 @@ def get_emb_sCIN(mod1_test, mod2_test, labels_test,
     if not os.path.exists(embs_dir):
         os.makedirs(embs_dir)
 
-    np.save(os.path.join(embs_dir, f"labels_test_{seed}.npy"), labels_test)
-    np.save(os.path.join(embs_dir, f"logits_test_{seed}.npy"), logits_test)
-    np.save(os.path.join(embs_dir, f"rna_emb{seed}.npy"), mod1_emb_np)
-    np.save(os.path.join(embs_dir, f"atac_emb{seed}.npy"), mod2_emb_np)
+    logits_df = pd.DataFrame(logits_test)
+    logits_df.to_csv(os.path.join(embs_dir, f"logits_test_{rep}.csv"), index=False)
     
     return mod1_emb_np, mod2_emb_np

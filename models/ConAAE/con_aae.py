@@ -65,13 +65,13 @@ def setup_args(args=[]):
     return options.parse_args(args)
 
 
-def train_con(mod1_train, mod2_train, labels_train, epochs,
-              settings=None, **kwargs):
+def train_ConAAE(mod1_train, mod2_train, labels_train, settings, **kwargs):
     
     
     save_dir = kwargs["save_dir"]
-    seed = kwargs["seed"]
+    rep = kwargs["rep"]
     is_pca = kwargs["is_pca"]
+    num_epochs = settings["num_epochs"]
 
     if is_pca:
     
@@ -90,7 +90,7 @@ def train_con(mod1_train, mod2_train, labels_train, epochs,
                         '--conditional-adv', '--conditional', '--discriminator', '--MMD-loss', '--anchor-loss', 
                         '-gpu'])
     
-    args.max_epochs = epochs
+    args.max_epochs = num_epochs
 
     # Check device
     if not torch.cuda.is_available():
@@ -111,8 +111,8 @@ def train_con(mod1_train, mod2_train, labels_train, epochs,
 
     # Train the model
     con.train()
-    torch.save(con.netRNA.state_dict(), os.path.join(save_dir, "models", f"netRNA_{seed}.pt"))
-    torch.save(con.netATAC.state_dict(), os.path.join(save_dir, "models", f"netATAC_{seed}.pt"))
+    torch.save(con.netRNA.state_dict(), os.path.join(save_dir, "models", f"netRNA_{rep}.pt"))
+    torch.save(con.netATAC.state_dict(), os.path.join(save_dir, "models", f"netATAC_{rep}.pt"))
     train_dict = {"model":con}
     if is_pca:
          train_dict["pca_mod1"] = pca_mod1
@@ -121,8 +121,8 @@ def train_con(mod1_train, mod2_train, labels_train, epochs,
     return train_dict
 
 
-def get_emb_con(mod1_test, mod2_test, labels_test, train_dict, save_dir=None,
-                **kwargs):
+def get_emb_ConAAE(mod1_test, mod2_test, labels_test, train_dict, save_dir=None,
+                  **kwargs):
      
      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
      
@@ -148,6 +148,7 @@ def get_emb_con(mod1_test, mod2_test, labels_test, train_dict, save_dir=None,
      Mod2_test_dataset = torch.utils.data.TensorDataset(mod2_test_t, labels_test_t)
 
      # Get embeddings
-     mod1_embs, mod2_embs = model.test(Mod1_test_dataset, Mod2_test_dataset, seed=seed, save_dir=save_dir)
+     mod1_embs, mod2_embs = model.test(Mod1_test_dataset, Mod2_test_dataset, 
+                                       seed=seed, save_dir=save_dir)
 
      return mod1_embs, mod2_embs

@@ -34,23 +34,10 @@ def extract_embs(z: np.array, train_cells: int, test_cells: int) -> Union[np.arr
     atac_emb = z[train_cells:train_cells + test_cells]
 
     return rna_emb, atac_emb
-
-
-def train_mofa(rna_train, atac_train, labels_train=None, epochs=None,
-                settings=None):
-    
-    """This function does nothing except returning essential params for get_mofa_emb."""
-
-    return [rna_train, atac_train, settings]
     
 
-def get_mofa_emb(rna_test, atac_test, labels_test=None, obj_list=None, save_dir=None, 
-                                             seed=None, device=None):
+def get_mofa_emb(rna_test, rna_train, atac_test, atac_train, settings, seed=None):
     
-    rna_train = obj_list[0]
-    atac_train = obj_list[1]
-    settings = obj_list[2]
-
     rna_data, atac_data = prepare_data_mofa(rna_train, atac_train, rna_test, atac_test)
     print(f"shape of the rna data {rna_data.shape}")
     print(f"shape of the atac data {atac_data.shape}")
@@ -63,9 +50,9 @@ def get_mofa_emb(rna_test, atac_test, labels_test=None, obj_list=None, save_dir=
     mofa_model = entry_point()
     mofa_model.set_data_options(scale_groups=False, scale_views=False)
     mofa_model.set_data_matrix(data, views_names=views, groups_names=groups)
-    mofa_model.set_model_options(factors=settings["FACTORS"])
-    mofa_model.set_train_options(iter=settings["EPOCHS"], 
-                                 convergence_mode=settings["CONV_MODE"],
+    mofa_model.set_model_options(factors=settings["num_factors"])
+    mofa_model.set_train_options(iter=settings["num_iterations"], 
+                                 convergence_mode=settings["convergence_mode"],
                                  seed=seed)
 
     mofa_model.build()
@@ -74,10 +61,8 @@ def get_mofa_emb(rna_test, atac_test, labels_test=None, obj_list=None, save_dir=
     Z = mofa_model.model.nodes["Z"].getExpectation()
     print(f"The Z shape is {Z.shape}")
 
-    rna_emb, atac_emb = extract_embs(z=Z, train_cells=rna_train.shape[0], 
-                                     test_cells=rna_test.shape[0])
-    
-    np.save(save_dir + f"/labels_test_{seed}.npy", labels_test)
+    rna_embs, atac_embs = extract_embs(z=Z, train_cells=rna_train.shape[0], 
+                                       test_cells=rna_test.shape[0])
 
 
-    return rna_emb, atac_emb
+    return rna_embs, atac_embs

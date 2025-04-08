@@ -93,8 +93,8 @@ def plot_asw_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
     if xticks:
         plt.xticks(xticks['positions'], xticks['labels'], fontsize=18, rotation=45)
     else:
-        plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
+        plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
     plt.ylim(0, 0.73)
 
     ax.spines['top'].set_visible(False)
@@ -171,17 +171,19 @@ def main() -> None:
     parser.add_argument("--metric", type=str)
     args = parser.parse_args()
 
-    colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00"]
+    colors = ["#e41a1c", "#377eb8", "#4daf4a", "#984ea3", "#ff7f00", "#fee08b", "#8c510a"]
     legend = {
         "sCIN":"sCIN",
         "Con-AAE":"Con-AAE",
         "MOFA":"MOFA",
         "Harmony":"Harmony",
-        "AE":"Autoencoder"
+        "AE":"Autoencoder",
+        "scBridge":"scBridge",
+        "SnapATAC2":"SnapATAC2"
     }
     xticks = {
-    "positions": [0, 1, 2, 3, 4],
-    "labels": ["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder"]
+    "positions": [0, 1, 2, 3, 4, 5, 6],
+    "labels": ["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge", "SnapATAC2"]
     }
 
     df = pd.read_csv(args.path)

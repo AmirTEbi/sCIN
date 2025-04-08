@@ -7,14 +7,46 @@ from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.manifold import TSNE
 import colorcet as cc
-import torch
-import networkx as nx
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 import anndata as ad
-from typing import Any, Tuple
+from typing import Any, Tuple, Dict
+import logging
 import os
+
+
+def setup_logging(level:str, 
+                  log_dir:str,
+                  model_name:str) -> object:
+     
+     os.makedirs(log_dir, exist_ok=True)
+     log_file = os.path.join(log_dir, f"{model_name}.log")
+
+     if level == "info":
+          logging.basicConfig(level=logging.INFO,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+     elif level == "debug":
+          logging.basicConfig(level=logging.DEBUG,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+     elif level == "warning":
+          logging.basicConfig(level=logging.WARNING,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+     
+     elif level == "error":
+          logging.basicConfig(level=logging.ERROR,
+                              format="%(asctime)s - %(levelname)s - %(message)s",
+                              handlers=[logging.FileHandler(log_file),
+                                        logging.StreamHandler()])
+          
+     logging.info(f"Logs will be saved to {log_file}.")
+
 
 def impute_cells(labels):
     """Make same-size label arrays

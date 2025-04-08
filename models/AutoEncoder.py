@@ -179,17 +179,17 @@ class SimpleAutoEncoder(nn.Module):
         return mod1_recon, mod2_recon, mod1_emb, mod2_emb
     
 
-def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=None, 
-             **kwargs):
+def train_AutoEncoder(mod1_train, mod2_train, settings=None, **kwargs):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    num_epochs = settings["num_epochs"]
     hidden_dim = settings["hidden_dim"]
     latent_dim = settings["latent_dim"]
     batch_size = settings["batch_size"]
-    lr = settings["lr"]
+    lr = settings["learning_rate"]
     save_dir = kwargs["save_dir"]
-    seed = kwargs["seed"]
+    rep = kwargs["rep"]
     is_pca = kwargs["is_pca"]
 
     if is_pca:
@@ -221,7 +221,7 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
     optimizer = Adam(ae.parameters(), lr=lr)
     mse = nn.MSELoss()
 
-    for epoch in range(epochs):
+    for epoch in range(num_epochs):
 
         ae.train()
         epoch_loss = 0.0
@@ -242,7 +242,7 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
         epoch_loss /= total_samples
         print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
     
-    torch.save(ae.state_dict(), os.path.join(save_dir, "models", f"AE_{seed}"))
+    torch.save(ae.state_dict(), os.path.join(save_dir, "models", f"AE_{rep}"))
     train_dict = {"model":ae}
     if is_pca:
         train_dict["pca_mod1"] = pca_mod1
@@ -251,8 +251,7 @@ def train_ae(mod1_train, mod2_train, labels_train=None, epochs=None, settings=No
     return train_dict
 
     
-def get_emb_ae(mod1_test, mod2_test, labels_test=None, train_dict=None, 
-               save_dir=None, **kwargs):
+def get_emb_AutoEncoder(mod1_test, mod2_test, train_dict, **kwargs):
      
      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
@@ -278,7 +277,5 @@ def get_emb_ae(mod1_test, mod2_test, labels_test=None, train_dict=None,
  
      mod1_emb_np = mod1_emb.cpu().numpy()
      mod2_emb_np = mod2_emb.cpu().numpy()
-
-     np.save(os.path.join(save_dir, f"labels_test_{seed}.npy"), labels_test)
 
      return mod1_emb_np, mod2_emb_np
