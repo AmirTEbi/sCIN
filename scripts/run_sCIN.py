@@ -1,6 +1,6 @@
 from ..sCIN.sCIN import train_sCIN, get_emb_sCIN
 from ..configs import sCIN
-from ..sCIN.utils import extract_counts, append_rows_has_inverse, append_rows
+from ..sCIN.utils import extract_counts, append_rows
 from ..sCIN.assess import assess
 from sklearn.model_selection import train_test_split
 import anndata as ad
@@ -25,59 +25,73 @@ def main() -> None:
         seeds = seeds[:args.num_reps]
 
     # Read data
-    mod1_adata = ad.read_h5ad(args.mod1_file)
-    mod2_adata = ad.read_h5ad(args.mod2_file)
-    mod1_counts, mod2_counts = extract_counts(mod1_adata, mod2_adata)
-    labels = mod1_adata.obs["cell_type_encoded"].values
+    rna_adata = ad.read_h5ad(args.mod1_file)
+    atac_adata = ad.read_h5ad(args.mod2_file)
+    rna_counts, atac_counts = extract_counts(rna_adata, atac_adata)
+    labels = rna_adata.obs["cell_type_encoded"].values
 
     res = []
     for i, seed in enumerate(seeds):
         
         rep = i + 1
-        mod1_train, mod1_test, mod2_train, mod2_test, \
-            labels_train, labels_test = train_test_split(mod1_counts,
-                                                         mod2_counts,
+        rna_train, rna_test, atac_train, atac_test, \
+            labels_train, labels_test = train_test_split(rna_counts,
+                                                         atac_counts,
                                                          labels,
                                                          test_size=0.3,
                                                          random_state=seed)
         
         
-        train_dict = train_sCIN(mod1_train, mod2_train,
-                                                    labels_train, settings=sCIN,
-                                                    save_dir=args.save_dir,
-                                                    rep=rep, is_pca=True)
+        train_dict = train_sCIN(rna_train, 
+                                atac_train,
+                                labels_train, 
+                                settings=sCIN,
+                                save_dir=args.save_dir,
+                                rep=rep, is_pca=True)
         
-        
-        mod1_embs, mod2_embs = get_emb_sCIN(mod1_test, mod2_test,
-                                            train_dict=train_dict,
-                                            rep=rep)
+        rna_embs, atac_embs = get_emb_sCIN(rna_test, 
+                                           atac_test,
+                                           train_dict=train_dict,
+                                           rep=rep)
 
         # Save outputs
-        mod1_embs_df = pd.DataFrame(mod1_embs)
-        mod2_embs_df = pd.DataFrame(mod2_embs)
+        embs_save_dir = os.path.join(args.save_dir, "embs")
+        os.makedirs(embs_save_dir, exist_ok=True)
+        rna_embs_df = pd.DataFrame(rna_embs)
+        atac_embs_df = pd.DataFrame(atac_embs)
         labels_df = pd.DataFrame(labels_test)
-        mod1_embs_df.to_csv(os.path.join(args.save_dir, "embs", f"mod1_embs_{rep}.csv"), index=False)
-        mod2_embs_df.to_csv(os.path.join(args.save_dir, "embs", f"mod2_embs_{rep}.csv"), index=False)
-        labels_df.to_csv(os.path.join(args.save_dir, "embs", f"labels_test_{rep}.csv"), index=False)
+        rna_embs_df.to_csv(os.path.join(embs_save_dir, f"rna_embs_rep{rep}.csv"), index=False)
+        atac_embs_df.to_csv(os.path.join(embs_save_dir, f"atac_embs_rep{rep}.csv"), index=False)
+        labels_df.to_csv(os.path.join(embs_save_dir, f"labels_test_rep{rep}.csv"), index=False)
 
         # Compute metrics
-        recall_at_k_12, num_pairs_12, cell_type_acc_12, asw = assess(
-            mod1_embs, mod2_embs, labels_test, seed=seed
-        )
-        
+        recall_at_k_a2r, num_pairs_a2r, cell_type_acc_a2r, asw, medr_a2r = assess(atac_embs, 
+                                                                                  rna_embs, 
+                                                                                  labels_test, 
+                                                                                  seed=seed)
         if args.is_inv_metrics:
-            recall_at_k_21, num_pairs_21, cell_type_acc_21, asw = assess(
-                mod2_embs, mod1_embs, labels_test, seed=seed
-            )
+            recall_at_k_r2a, num_pairs_r2a, cell_type_acc_r2a, _, medr_r2a = assess(rna_embs, 
+                                                                                    atac_embs, 
+                                                                                    labels_test, 
+                                                                                    seed=seed)
 
-            res = append_rows_has_inverse(res, rep, recall_at_k_12, num_pairs_12,
-                                          cell_type_acc_12, asw, recall_at_k_21,
-                                          num_pairs_21, cell_type_acc_21)
-        else:
-            res = append_rows(res, rep, recall_at_k_12, num_pairs_12,
-                              cell_type_acc_12, asw)
-
-    
+        for k, v_a2r in recall_at_k_a2r.items():
+            v_r2a = recall_at_k_r2a.get(k, 0)
+            res.append({
+                "Models":"sCIN",
+                "Replicates":i+1,
+                "k":k,
+                "Recall_at_k_a2r":v_a2r,
+                "Recall_at_k_r2a":v_r2a,
+                "num_pairs_a2r":num_pairs_a2r,
+                "num_pairs_r2a":num_pairs_r2a if num_pairs_r2a is not None else 0.0,
+                "cell_type_acc_a2r":cell_type_acc_a2r,
+                "cell_type_acc_r2a":cell_type_acc_r2a if cell_type_acc_r2a is not None else 0.0,
+                "cell_type_ASW":asw,
+                "MedR_a2r":medr_a2r,
+                "MedR_r2a":medr_r2a if medr_r2a is not None else 0.0
+            })            
+            
     results = pd.DataFrame(res)
     results.to_csv(os.path.join(args.save_dir, "outs", f"metrics_sCIN_{args.num_reps}reps.csv"))
 

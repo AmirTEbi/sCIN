@@ -98,8 +98,7 @@ def main() -> None:
         # Train and save the model
         butterfly.train_model(seed=seed)
         model_save_dir = os.path.join(args.save_dir, "models")
-        if not os.path.exists(model_save_dir):
-            os.makedirs(model_save_dir)
+        os.makedirs(model_save_dir, exist_ok=True)
         torch.save(butterfly.state_dict(), os.path.join(model_save_dir, f"scButterfly_rep{i}.pt"))
 
         # Get Predictions
@@ -108,6 +107,16 @@ def main() -> None:
         print(f"Shape of the RNA to ATAC pred: {R2A_predict.shape}")
         labels = RNA_data.obs["cell_type_encoded"].values
         labels_test = labels[test_id]
+
+        rna_embs_df = pd.DataFrame(A2R_predict)
+        atac_embs_df = pd.DataFrame(R2A_predict)
+        labels_test_df = pd.DataFrame(labels_test)
+        embs_save_dir = os.path.join(args.save_dir, "embs")
+        os.makedirs(embs_save_dir, exist_ok=True)
+        rna_embs_df.to_csv(os.path.join(embs_save_dir, f"rna_embs_rep{i}.csv"), index=False)
+        atac_embs_df.to_csv(os.path.join(embs_save_dir, f"atac_embs_rep{i}.csv"), index=False)
+        labels_test_df.to_csv(os.path.join(embs_save_dir, f"labels_test_rep{i}.csv"), index=False)
+
 
         # Evaluations
         recall_at_k_a2r, num_pairs_a2r, cell_type_acc_a2r, asw, medr_a2r = assess(R2A_predict,
@@ -126,7 +135,7 @@ def main() -> None:
                 "Replicates":i+1,
                 "k":k,
                 "Recall_at_k_a2r":v_a2r,
-                "Recall_at_k_r2a":v_r2a,
+                "Recall_at_k_r2a":v_r2a if v_r2a is not None else 0.0,
                 "num_pairs_a2r":num_pairs_a2r,
                 "num_pairs_r2a":num_pairs_r2a if num_pairs_r2a is not None else 0.0,
                 "cell_type_acc_a2r":cell_type_acc_a2r,
@@ -138,8 +147,7 @@ def main() -> None:
     
     results = pd.DataFrame(res)
     res_save_dir = os.path.join(args.save_dir, "outs")
-    os.makedirs(model_save_dir, exist_ok=True)
-    
+    os.makedirs(res_save_dir, exist_ok=True)
     results.to_csv(os.path.join(res_save_dir, f"metrics_scButterfly_{args.num_reps}reps.csv"), index=False)
     logging.info(f"scButterfly results saved to {res_save_dir}.")
 
