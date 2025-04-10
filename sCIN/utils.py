@@ -3,6 +3,7 @@
 import numpy as np
 import anndata as ad
 import pandas as pd
+import pyranges as pr
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.manifold import TSNE
@@ -12,11 +13,268 @@ import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 import anndata as ad
-from typing import Dict, Tuple, List, Optional, Union
+from typing import Dict, Tuple, List, Optional, Union, Any
 import logging
 import re
 import os
 
+
+###########################################
+#                                         #
+#  Functions for computing gene activity  #
+#                                         #
+###########################################
+
+def _remove_dot_in_gene_ids(data: pd.DataFrame) -> pd.DataFrame:
+     """
+     Remove '.' in gene ids.
+
+     Parameters
+     ----------
+     file: pd.DataFrame
+          A GTF data frame or .var.gene_id of an AnnData object.
+     
+     Return
+     ------
+     pd.DataFrame
+          Corrected gene_ids.
+     """
+     data_ = data.copy()
+     data_["gene_id_corr"] = data_["gene_id"].str.extract(r"^([^\.]+)")
+
+     return data_
+
+
+def extend_gene_regions(gtf_df: pd.DataFrame, extension: int = 2000) -> pd.DataFrame:
+     """
+     Extend the gene body to cover the promoter region.
+
+     Parameters
+     ----------
+     gtf_df: pd.DataFrame
+          The Gene Transfer Format file as a data frame.
+
+     extension: int
+          The number of basepairs the gene body extend to. 
+     
+     Returns
+     -------
+     pd.DataFrame
+          Updated gtf_df with necessary columns for downstream tasks.
+     """
+
+     gtf_df = gtf_df.copy()
+     plus_strand = gtf_df["Strand"] == "+"
+     minus_strand = ~plus_strand
+
+     gtf_df.loc[plus_strand, "Start"] = np.maximum(0, gtf_df.loc[plus_strand, "Start"] - extension)
+     gtf_df.loc[minus_strand, "End"] = gtf_df.loc[minus_strand, "End"] + extension
+
+     return gtf_df[["Chromosome", "Start", "End", "gene_id"]]
+
+
+def process_ATAC_peaks_for_gene_act(atac_ad: ad.AnnData,
+                                    columns_map: Dict[str,str],
+                                    std_chrs: Dict[str, Any]) -> pr.PyRanges:
+     """
+     Process the ATAC-seq peaks for computing gene activity.
+
+     Parameters
+     ----------
+     atac_ad: ad.AnnData
+          ATAC-seq data
+     
+     Returns
+     -------
+     pr.pyranges.PyRanges
+          ATAC-seq peaks characteristics as a PyRanges object.
+     """
+     peaks_df = atac_ad.var.reset_index()
+     peaks_df.rename(columns={k: v for k, v in columns_map.items() if k in peaks_df.columns}, inplace=True)
+     if "peak_id" not in peaks_df.columns:
+          peaks_df["peak_id"] = peaks_df.index.astype(str)
+     
+     if "Chromosome" in peaks_df.columns:
+          peaks_df = peaks_df.loc[peaks_df["Chromosome"].isin(std_chrs), ["peak_id", "Chromosome", "Start", "End"]].copy()
+     else:
+        raise KeyError("Missing 'Chromosome' column in ATAC peak data.")
+
+     return pr.PyRanges(peaks_df)
+
+
+def process_GTF_for_gene_act(gtf_df: pd.DataFrame,
+                             std_chrs: Dict[str, Any],
+                             extension: int = 2000,
+                             feature_type: str = "transcript") -> pr.PyRanges:
+     """
+     Process GTF file for computing gene activity.
+
+     Parameters
+     ----------
+     gtf_df: pd.DataFrame
+          If you used pyranges.read_gtf() to parse the GTF file, simply use the **df** attribute of the output.
+     
+     extention: int
+          The number of basepairs the gene body extend to. 
+     
+     Return
+     ------
+     pr.pyranges.PyRanges
+     """
+     gtf_df["Chromosome"] = gtf_df["Chromosome"].apply(lambda x: x if x.startswith("chr") else "chr" + x)
+     gtf_df = gtf_df[(gtf_df["Feature"] == feature_type) & (gtf_df["Chromosome"].isin(std_chrs))].copy()
+     gtf_extended = extend_gene_regions(gtf_df, extension)
+
+     return pr.PyRanges(gtf_extended)
+
+
+def compute_gene_activity(atac_ad: ad.AnnData, 
+                          gtf_file_path: str,
+                          save_dir: str, 
+                          extension: int = 2000,
+                          feature_type: str = "transcript") -> None :
+     
+     """
+     Compute the gene activity matrix from the given ATAC-seq data.
+
+     Parameters
+     ----------
+     atac_ad: ad.AnnData
+          ATAC-seq data.
+
+     rna_ad: ad.AnnData
+          RNA-seq data.
+
+     gtf_file_path: str
+          The path to the Gene Tranfer Format (GTF) file.
+
+     extension: int
+          The number of basepairs the gene body extend to. 
+     
+     Returns
+     -------
+     Tuple[np.ndarray, List[str]]
+          gene_activity (n_cells, n_genes) containing summed ATAC counts.
+          gene_ids corresponding to the columns.
+     """
+     # Read GTF file
+     gtf = pr.read_gtf(gtf_file_path)
+     gtf_df = gtf.df
+     gtf_df_cp = gtf_df.copy()
+     print("Head of the GTF annotations:")
+     gtf_df_cp.head()
+
+     # Correct gene_id 
+     gtf_df_cp = _remove_dot_in_gene_ids(gtf_df_cp)
+
+     std_chrs = {f'chr{i}' for i in range(1, 23)} | {"chrX", "chrY", "chrM"}
+
+     # Process ATAC peaks
+     rename_dict = {
+        "index": "peak_id",
+        "chrom": "Chromosome",
+        "chromStart": "Start",
+        "chromEnd": "End"
+        }
+     
+     peaks_ranges = process_ATAC_peaks_for_gene_act(atac_ad, rename_dict, std_chrs)
+
+     # Process GTF
+     gene_ranges = process_GTF_for_gene_act(gtf_df_cp, std_chrs, feature_type="transcript")
+
+     # Overlap ATAC peaks with gene regions
+     overlap_df = peaks_ranges.join(gene_ranges, how="left").df
+     peaks_df = peaks_ranges.df
+     peaks_df.set_index(["Chromosome", "Start", "End"], inplace=True)
+     overlap_df["peak_id"] = peaks_df.loc[overlap_df.set_index(["Chromosome", "Start", "End"]).index, "peak_id"].values
+
+     gene2peak = overlap_df.groupby("gene_id")["peak_id"].apply(list)
+
+     # Build gene activity matrix
+     num_cells = atac_ad.n_obs
+     genes = list(gene2peak.index)
+     gene_activity = np.zeros((num_cells, len(genes)))
+
+     for i, gene in enumerate(genes):
+          peak_ids = gene2peak[gene]
+          valid_indices = []
+          for p in peak_ids:
+            try:
+                idx = int(p)
+                if idx < atac_ad.shape[1]:
+                    valid_indices.append(idx)
+            except ValueError:
+                continue
+          if not valid_indices:
+               continue
+
+          peak_names = atac_ad.var_names[valid_indices]
+          if hasattr(atac_ad.X, "A"):
+               gene_activity[:, i] = atac_ad[:, peak_names].X.sum(axis=1).A.ravel()
+          
+          else:
+               gene_activity[:, i] = atac_ad[:, peak_names].X.sum(axis=1)
+          
+          # Save the ouput
+          gene_act_ad = ad.AnnData(X=gene_activity)
+          gene_act_ad.var["gene_id"] = pd.Series(genes).astype(str)
+          if "cell_type" in atac_ad.obs.columns:
+               gene_act_ad.obs["CellType"] = atac_ad.obs["cell_type"]
+          else:
+               print("Warning: 'cell_type' column not found in ATAC AnnData.obs.")
+          gene_act_ad.write(os.path.join(save_dir, "gene_activity.h5ad"))
+     
+     return None
+
+
+def find_ovelap_genes(gene_activity_ad: ad.AnnData, rna_ad: ad.AnnData) -> Tuple[ad.AnnData, ad.AnnData]:
+     """
+     Find overlap genes betwen ATAC gene activity and the RNA data.
+
+     Parameters
+     ----------
+     gene_activity_mat: np.ndarray
+          The gene activity matrix computed from the ATAC-seq data.
+
+     rna_ad: ad.AnnData
+          The RNA-seq data.
+     
+     Returns
+     -------
+     Tuple[ad.AnnData, ad.AnnData]
+          Updated AnnData objects with overlap genes.
+     """
+     if "gene_id" not in rna_ad.var.columns:
+          raise KeyError("RNA AnnData must have a 'gene_id' column in rna.var.")
+     
+     rna_ad.var = rna_ad.var.set_index("gene_id", drop=False)
+     if not rna_ad.var.index.is_unique:
+          print("Warning: Duplicate gene_ids found in RNA data. Removing duplicates.")
+          rna = rna[:, ~rna.var.index.duplicated()].copy()
+     
+     if "gene_id" not in gene_activity_ad.var.columns:
+          raise KeyError("Gene activity AnnData must have a 'gene_id' column in .var.")
+     
+     atac_genes = gene_activity_ad.var["gene_id"].tolist()
+     rna_genes = rna_ad.var.index.tolist()
+
+     shared_genes = set(atac_genes).intersection(rna_genes)
+     print(f"Number of shared genes: {len(shared_genes)}")
+
+     shared_genes_sorted = sorted(shared_genes)
+
+     filtered_gene_activity_ad = gene_activity_ad[:, shared_genes_sorted].copy()
+     filtered_rna_ad = rna_ad[:, shared_genes_sorted].copy()
+
+     return filtered_gene_activity_ad, filtered_rna_ad
+
+
+###########################################
+#                                         #
+#  Functions for computing metrics from   #
+#               embeddings                #
+#                                         #
+###########################################
 
 def read_embs_from_np(file_list: List[str]) -> List[np.ndarray]:
      """
@@ -331,6 +589,11 @@ def setup_logging(level:str,
           
      logging.info(f"Logs will be saved to {log_file}.")
 
+###########################################
+#                                         #
+#   Helper functions for runnig models    #
+#                                         #
+###########################################
 
 def impute_cells(labels):
     """Make same-size label arrays
