@@ -93,9 +93,9 @@ def plot_asw_24(df:pd.DataFrame, colors:dict, save_dir:str, file_type="png",
     if xticks:
         plt.xticks(xticks['positions'], xticks['labels'], fontsize=18, rotation=45)
     else:
-        plt.xticks(fontsize=18)
-    plt.yticks(fontsize=18)
-    plt.ylim(0, 0.8)
+        plt.xticks(fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.ylim(0, 0.73)
 
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
