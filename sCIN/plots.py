@@ -346,15 +346,6 @@ def plot_tsne_embs(tsne_reps:np.ndarray, labels:np.ndarray, configs:Dict[str, An
     return ax
 
 
-def check_file_extension(file_path:str) -> str:
-    """
-    Extract the file extension from the file path.
-    """
-    _, extenstion = os.path.splitext(file_path)
-
-    return extenstion
-
-
 def _extract_seed(file_path:str) -> int:
     """
     Extract the random seed value from the file name. 
