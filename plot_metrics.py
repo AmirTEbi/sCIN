@@ -9,8 +9,8 @@ from sCIN.plots import (plot_recall_at_k,
                         compute_tsne_embs,
                         plot_tsne_original,
                         plot_tsne_embs,
-                        plot_all,
-                        check_file_extension)
+                        plot_all)
+from sCIN.utils import extract_file_extension
 from sklearn.model_selection import train_test_split
 from configs import plots
 import argparse
@@ -63,7 +63,7 @@ def main() -> None:
                                save_dir=args.save_dir)
         
         elif args.plot_tsne:
-            file_ext = check_file_extension(args.tsne_original_reps_file)
+            file_ext = extract_file_extension(args.tsne_original_reps_file)
             if file_ext == ".npy":
                 tsne_original_reps = np.load(args.tsne_original_reps_file)
                 labels_original = np.load(args.original_labels_file)
@@ -80,7 +80,7 @@ def main() -> None:
     elif args.plot == "tsne_embs":
         if args.compute_tsne: 
             cfg = plots["tSNE_embs"]
-            file_ext = check_file_extension(args.mod1_embs_file)
+            file_ext = extract_file_extension(args.mod1_embs_file)
             if file_ext == ".npy":
                 mod1_embs = np.load(args.mod1_embs_file)
                 mod2_embs = np.load(args.mod2_embs_file)
@@ -102,7 +102,7 @@ def main() -> None:
             plot_tsne_embs(tsne_embs_reps, labels=embs_labels, configs=cfg, save_dir=args.save_dir)
 
         elif args.plot_tsne:
-            file_ext = check_file_extension(args.tsne_embs_reps_file)
+            file_ext = extract_file_extension(args.tsne_embs_reps_file)
             if file_ext == ".npy":
                 tsne_embs_reps = np.load(args.tsne_embs_reps_file)
                 embs_labels = np.load(args.embs_labels_file)
