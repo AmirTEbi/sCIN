@@ -6,6 +6,7 @@ import pandas as pd
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.manifold import TSNE
+from sCIN.assess import assess, assess_joint
 import colorcet as cc
 import json
 import matplotlib.pyplot as plt
@@ -14,6 +15,40 @@ import anndata as ad
 from typing import Any, Tuple, Dict
 import logging
 import os
+
+
+def compute_metrics_from_embs_for_all_models(res_dir: str) -> None:
+     """
+     Compute metrics for all models' embeddings.
+
+     Parameters
+     ----------
+     res_dir: string
+          The directory to save all the results.
+     """
+
+
+def compute_metrics_from_embs_for_one_model(model_res_dir: str) -> None:
+
+     """
+     Compute metrics for the given model.
+
+     Parameters
+     ----------
+     model_res_dir: string
+          The directory to save the results of the given model.
+     """
+     embs_dir = os.path.join(model_res_dir, "embs")
+     if not os.path.isdir(embs_dir):
+          raise FileNotFoundError(f"Directory not found: {embs_dir}")
+     
+     rna_embs_files = [f for f in os.listdir(embs_dir) if "rna" in f]
+     atac_embs_files = [f for f in os.listdir(embs_dir) if "atac" in f]
+     labels_files = [f for f in os.listdir(embs_dir) if "label" in f]
+
+
+
+
 
 
 def setup_logging(level:str, 
