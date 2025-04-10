@@ -5,11 +5,17 @@ from typing import Tuple
 
 
 def compute_distance(mod1_embs:np.array, mod2_embs:np.array) -> np.array:
+    """
+    
+    """
        
     return cdist(mod1_embs, mod2_embs, metric="euclidean")
    
 
 def sort_match_cells(dist_matrix:np.array) -> Tuple[np.array, np.array, np.array]:
+   """
+   
+   """
    
    num_cells = dist_matrix.shape[0]
    paired_cells = np.full(num_cells, -1)
@@ -29,11 +35,17 @@ def sort_match_cells(dist_matrix:np.array) -> Tuple[np.array, np.array, np.array
 
 
 def compute_joint_distance(joint_embs:np.array) -> np.array:
+   """
+   
+   """
    
    return cdist(joint_embs, joint_embs, metric="euclidean")
 
 
 def select_k_closest(dist_matrix:np.ndarray, k:int) -> np.ndarray:
+   """
+   
+   """
    
    np.fill_diagonal(dist_matrix, np.inf)
 
@@ -41,6 +53,9 @@ def select_k_closest(dist_matrix:np.ndarray, k:int) -> np.ndarray:
 
    
 def compute_recall_at_k(sorted_indices_all:np.array) -> dict:
+   """
+   
+   """
    
    num_cells = sorted_indices_all.shape[0]
    recall_at_k = {}
@@ -51,16 +66,25 @@ def compute_recall_at_k(sorted_indices_all:np.array) -> dict:
    
 
 def compute_num_pairs(paired_cells:np.array, num_cells:int) -> float:
+   """
+   
+   """
    
    return float(np.sum(paired_cells == np.arange(num_cells)))
    
 
 def compute_cell_type_accuracy(paired_cells:np.array, labels:np.array) -> float:
+   """
+   
+   """
    
    return float(np.mean(labels[paired_cells] == labels))
 
 
 def compute_cell_type_accuracy_joint(closest_cells:np.ndarray, labels:np.ndarray) -> float:
+   """
+   
+   """
    
    num_cells = closest_cells.shape[0]
 
@@ -89,6 +113,9 @@ def compute_cell_type_accuracy_joint(closest_cells:np.ndarray, labels:np.ndarray
 
 
 def compute_norm_ASW(joint_embs:np.array, labels:np.array, seed=None) -> float:
+   """
+   
+   """
    
    return (silhouette_score(joint_embs, labels, random_state=seed) + 1) / 2
 
@@ -126,9 +153,54 @@ def assess(mod1_embs:np.array, mod2_embs:np.array,
    return recall_at_k, num_pairs, cell_type_acc, asw, medr
 
 
-def assess_joint(joint_embs:np.ndarray, labels:np.ndarray, 
+def assess_joint(joint_embs:np.ndarray, 
+                 labels:np.ndarray, 
                  seed:int=None, k:int=1) -> Tuple[float, float]:
    
+   """
+   
+   """
+   
+   dist_matrix = compute_joint_distance(joint_embs)
+   closest_cells = select_k_closest(dist_matrix, k)
+   cell_type_acc = compute_cell_type_accuracy_joint(closest_cells, labels)
+   asw = compute_norm_ASW(joint_embs, labels, seed=seed)
+
+   return cell_type_acc, asw
+
+
+def assess_joint_from_separate_embs(mod1_embs: np.ndarray,
+                                    mod2_embs: np.ndarray,
+                                    labels: np.ndarray,
+                                    seed: int = None,
+                                    k: int = 1) -> Tuple[float, float]:
+   """
+   Compute metrics for joint embeddings when the model returns separate embeddings.
+
+   Parameters
+   ----------
+   mod1_embs: np.ndarray
+      Embeddings for the modality 1.
+
+   mod2_embs: np.ndarray
+      Embeddings for the modality 2.
+
+   labels: np.ndarray
+      Cell type labels.
+
+   seed: int
+      Random seed for the current replication.
+
+   k: int
+      The number of nearest neighbors.
+
+   Returns
+   -------
+   Tuple[float, float]
+      Cell type accuracy and Average Silhouette Width (ASW)
+   """
+   
+   joint_embs = np.column_stack([mod1_embs, mod2_embs])
    dist_matrix = compute_joint_distance(joint_embs)
    closest_cells = select_k_closest(dist_matrix, k)
    cell_type_acc = compute_cell_type_accuracy_joint(closest_cells, labels)
