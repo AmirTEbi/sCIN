@@ -3,18 +3,451 @@
 import numpy as np
 import anndata as ad
 import pandas as pd
+import pyranges as pr
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA, IncrementalPCA
 from sklearn.manifold import TSNE
-from sCIN.assess import assess, assess_joint
+from sCIN.assess import assess, assess_joint, assess_joint_from_separate_embs
 import colorcet as cc
 import json
 import matplotlib.pyplot as plt
 import seaborn as sns
 import anndata as ad
-from typing import Any, Tuple, Dict
+from typing import Dict, Tuple, List, Optional, Union, Any
 import logging
+import re
 import os
+
+
+###########################################
+#                                         #
+#  Functions for computing gene activity  #
+#                                         #
+###########################################
+
+def _remove_dot_in_gene_ids(data: pd.DataFrame) -> pd.DataFrame:
+     """
+     Remove '.' in gene ids.
+
+     Parameters
+     ----------
+     file: pd.DataFrame
+          A GTF data frame or .var.gene_id of an AnnData object.
+     
+     Return
+     ------
+     pd.DataFrame
+          Corrected gene_ids.
+     """
+     data_ = data.copy()
+     data_["gene_id_corr"] = data_["gene_id"].str.extract(r"^([^\.]+)")
+
+     return data_
+
+
+def extend_gene_regions(gtf_df: pd.DataFrame, extension: int = 2000) -> pd.DataFrame:
+     """
+     Extend the gene body to cover the promoter region.
+
+     Parameters
+     ----------
+     gtf_df: pd.DataFrame
+          The Gene Transfer Format file as a data frame.
+
+     extension: int
+          The number of basepairs the gene body extend to. 
+     
+     Returns
+     -------
+     pd.DataFrame
+          Updated gtf_df with necessary columns for downstream tasks.
+     """
+
+     gtf_df = gtf_df.copy()
+     plus_strand = gtf_df["Strand"] == "+"
+     minus_strand = ~plus_strand
+
+     gtf_df.loc[plus_strand, "Start"] = np.maximum(0, gtf_df.loc[plus_strand, "Start"] - extension)
+     gtf_df.loc[minus_strand, "End"] = gtf_df.loc[minus_strand, "End"] + extension
+
+     return gtf_df[["Chromosome", "Start", "End", "gene_id"]]
+
+
+def process_ATAC_peaks_for_gene_act(atac_ad: ad.AnnData,
+                                    columns_map: Dict[str,str],
+                                    std_chrs: Dict[str, Any]) -> pr.PyRanges:
+     """
+     Process the ATAC-seq peaks for computing gene activity.
+
+     Parameters
+     ----------
+     atac_ad: ad.AnnData
+          ATAC-seq data
+     
+     Returns
+     -------
+     pr.pyranges.PyRanges
+          ATAC-seq peaks characteristics as a PyRanges object.
+     """
+     peaks_df = atac_ad.var.reset_index()
+     peaks_df.rename(columns={k: v for k, v in columns_map.items() if k in peaks_df.columns}, inplace=True)
+     if "peak_id" not in peaks_df.columns:
+          peaks_df["peak_id"] = peaks_df.index.astype(str)
+     
+     if "Chromosome" in peaks_df.columns:
+          peaks_df = peaks_df.loc[peaks_df["Chromosome"].isin(std_chrs), ["peak_id", "Chromosome", "Start", "End"]].copy()
+     else:
+        raise KeyError("Missing 'Chromosome' column in ATAC peak data.")
+
+     return pr.PyRanges(peaks_df)
+
+
+def process_GTF_for_gene_act(gtf_df: pd.DataFrame,
+                             std_chrs: Dict[str, Any],
+                             extension: int = 2000,
+                             feature_type: str = "transcript") -> pr.PyRanges:
+     """
+     Process GTF file for computing gene activity.
+
+     Parameters
+     ----------
+     gtf_df: pd.DataFrame
+          If you used pyranges.read_gtf() to parse the GTF file, simply use the **df** attribute of the output.
+     
+     extention: int
+          The number of basepairs the gene body extend to. 
+     
+     Return
+     ------
+     pr.pyranges.PyRanges
+     """
+     gtf_df["Chromosome"] = gtf_df["Chromosome"].apply(lambda x: x if x.startswith("chr") else "chr" + x)
+     gtf_df = gtf_df[(gtf_df["Feature"] == feature_type) & (gtf_df["Chromosome"].isin(std_chrs))].copy()
+     gtf_extended = extend_gene_regions(gtf_df, extension)
+
+     return pr.PyRanges(gtf_extended)
+
+
+def compute_gene_activity(atac_ad: ad.AnnData, 
+                          gtf_file_path: str,
+                          save_dir: str, 
+                          extension: int = 2000,
+                          feature_type: str = "transcript") -> None :
+     
+     """
+     Compute the gene activity matrix from the given ATAC-seq data.
+
+     Parameters
+     ----------
+     atac_ad: ad.AnnData
+          ATAC-seq data.
+
+     rna_ad: ad.AnnData
+          RNA-seq data.
+
+     gtf_file_path: str
+          The path to the Gene Tranfer Format (GTF) file.
+
+     extension: int
+          The number of basepairs the gene body extend to. 
+     
+     Returns
+     -------
+     Tuple[np.ndarray, List[str]]
+          gene_activity (n_cells, n_genes) containing summed ATAC counts.
+          gene_ids corresponding to the columns.
+     """
+     # Read GTF file
+     gtf = pr.read_gtf(gtf_file_path)
+     gtf_df = gtf.df
+     gtf_df_cp = gtf_df.copy()
+     print("Head of the GTF annotations:")
+     gtf_df_cp.head()
+
+     # Correct gene_id 
+     gtf_df_cp = _remove_dot_in_gene_ids(gtf_df_cp)
+
+     std_chrs = {f'chr{i}' for i in range(1, 23)} | {"chrX", "chrY", "chrM"}
+
+     # Process ATAC peaks
+     rename_dict = {
+        "index": "peak_id",
+        "chrom": "Chromosome",
+        "chromStart": "Start",
+        "chromEnd": "End"
+        }
+     
+     peaks_ranges = process_ATAC_peaks_for_gene_act(atac_ad, rename_dict, std_chrs)
+
+     # Process GTF
+     gene_ranges = process_GTF_for_gene_act(gtf_df_cp, std_chrs, feature_type="transcript")
+
+     # Overlap ATAC peaks with gene regions
+     overlap_df = peaks_ranges.join(gene_ranges, how="left").df
+     peaks_df = peaks_ranges.df
+     peaks_df.set_index(["Chromosome", "Start", "End"], inplace=True)
+     overlap_df["peak_id"] = peaks_df.loc[overlap_df.set_index(["Chromosome", "Start", "End"]).index, "peak_id"].values
+
+     gene2peak = overlap_df.groupby("gene_id")["peak_id"].apply(list)
+
+     # Build gene activity matrix
+     num_cells = atac_ad.n_obs
+     genes = list(gene2peak.index)
+     gene_activity = np.zeros((num_cells, len(genes)))
+
+     for i, gene in enumerate(genes):
+          peak_ids = gene2peak[gene]
+          valid_indices = []
+          for p in peak_ids:
+            try:
+                idx = int(p)
+                if idx < atac_ad.shape[1]:
+                    valid_indices.append(idx)
+            except ValueError:
+                continue
+          if not valid_indices:
+               continue
+
+          peak_names = atac_ad.var_names[valid_indices]
+          if hasattr(atac_ad.X, "A"):
+               gene_activity[:, i] = atac_ad[:, peak_names].X.sum(axis=1).A.ravel()
+          
+          else:
+               gene_activity[:, i] = atac_ad[:, peak_names].X.sum(axis=1)
+          
+          # Save the ouput
+          gene_act_ad = ad.AnnData(X=gene_activity)
+          gene_act_ad.var["gene_id"] = pd.Series(genes).astype(str)
+          if "cell_type" in atac_ad.obs.columns:
+               gene_act_ad.obs["CellType"] = atac_ad.obs["cell_type"]
+          else:
+               print("Warning: 'cell_type' column not found in ATAC AnnData.obs.")
+          gene_act_ad.write(os.path.join(save_dir, "gene_activity.h5ad"))
+     
+     return None
+
+
+def find_ovelap_genes(gene_activity_ad: ad.AnnData, rna_ad: ad.AnnData) -> Tuple[ad.AnnData, ad.AnnData]:
+     """
+     Find overlap genes betwen ATAC gene activity and the RNA data.
+
+     Parameters
+     ----------
+     gene_activity_mat: np.ndarray
+          The gene activity matrix computed from the ATAC-seq data.
+
+     rna_ad: ad.AnnData
+          The RNA-seq data.
+     
+     Returns
+     -------
+     Tuple[ad.AnnData, ad.AnnData]
+          Updated AnnData objects with overlap genes.
+     """
+     if "gene_id" not in rna_ad.var.columns:
+          raise KeyError("RNA AnnData must have a 'gene_id' column in rna.var.")
+     
+     rna_ad.var = rna_ad.var.set_index("gene_id", drop=False)
+     if not rna_ad.var.index.is_unique:
+          print("Warning: Duplicate gene_ids found in RNA data. Removing duplicates.")
+          rna = rna[:, ~rna.var.index.duplicated()].copy()
+     
+     if "gene_id" not in gene_activity_ad.var.columns:
+          raise KeyError("Gene activity AnnData must have a 'gene_id' column in .var.")
+     
+     atac_genes = gene_activity_ad.var["gene_id"].tolist()
+     rna_genes = rna_ad.var.index.tolist()
+
+     shared_genes = set(atac_genes).intersection(rna_genes)
+     print(f"Number of shared genes: {len(shared_genes)}")
+
+     shared_genes_sorted = sorted(shared_genes)
+
+     filtered_gene_activity_ad = gene_activity_ad[:, shared_genes_sorted].copy()
+     filtered_rna_ad = rna_ad[:, shared_genes_sorted].copy()
+
+     return filtered_gene_activity_ad, filtered_rna_ad
+
+
+###########################################
+#                                         #
+#  Functions for computing metrics from   #
+#               embeddings                #
+#                                         #
+###########################################
+
+def read_embs_from_np(file_list: List[str]) -> List[np.ndarray]:
+     """
+     Read embeddings' files with .npy extention.
+
+     Parameters
+     ----------
+     file_list: List[str]
+          A list of embeddings files.
+     
+     Returns
+     -------
+     List[np.ndarray]
+          A list of embeddings.
+     """
+     out = []
+     for f in file_list:
+          f_np = np.load(f)
+          out.append(f_np)
+     
+     return out 
+
+
+def read_embs_from_csv(file_list: List[str]) -> List[np.ndarray]:
+     """
+     Read embeddings' files with .csv extension.
+
+     Parameters
+     ----------
+     file_list: List[str]
+          A list of embeddings files.
+
+     Returns
+     -------
+     List[np.ndarray]
+          A list of embeddings.
+     """
+
+     out = []
+     for f in file_list:
+          f_df = pd.read_csv(f_df)
+          f_np = f_df.values
+          out.append(f_np)
+
+     return out
+
+
+def find_matched_files(embs_file: str, 
+                       other_embs_files: List[str], 
+                       labels_files: Optional[List[str]] = None) -> Union[Tuple[str,str], str, None]:
+     """
+     Find the matching files to the given embeddinf file based on the replication.
+
+     Parameters
+     ----------
+     embs_file: string
+          Name of the embedding file you want to find the matching files for.
+     
+     other_embs_files: List[str]
+          A list of embedding files you want to find the matching files from.
+
+     labels_files:  Optional[List[str]]
+          A list of labels files you want to find the matching files from.
+
+     Returns
+     -------
+     Union[Tuple[str,str], str, None]
+          A tuple of the names of the matched files (embedding and label),
+          or only the name of the matched file, or None if no match is found.  
+     """
+
+     match = re.search(r"\d+", embs_file)
+     if not match:
+          return None
+     
+     rep = match.group()
+     
+     if labels_files is not None:
+          for f, f_ in zip(other_embs_files, labels_files):
+               if rep in f and rep in f_:   
+                    return (f, f_)
+          raise FileNotFoundError(f"No matching embedding and label files found for rep '{rep}'")
+
+     else:
+          for f in other_embs_files:
+               if rep in f:
+                    return f
+          raise FileNotFoundError(f"No matching embedding file found for rep '{rep}'")
+
+
+def extract_file_extension(file_path: str) -> str:
+    """
+    Extract the file extension from the file path.
+    
+    Parameters
+    ----------
+    file_path: string
+		The path to the file or the file name.
+          
+    Returns
+    -------
+    string 
+		The file extenstion.
+    """
+    _, extenstion = os.path.splitext(file_path)
+
+    return extenstion
+
+
+def find_seed_from_filename(filename: str) -> int:
+     """
+     Find the random seed from the filename.
+
+     Parameters
+     ----------
+     filename: str
+          The name of the file.
+     
+     Returns
+     -------
+     int
+          The random seed.
+     """
+
+     match = re.search(r"\d+", filename)
+     if not match:
+          return None
+     
+     seeds = [seed for seed in range(0, 100, 10)]
+     reps = [rep for rep in range(1, 11)]
+     found = match.group()
+     if found in reps:
+          return int(found)
+     
+     elif found in seeds:
+          return (found / 10) + 1 
+     
+
+def find_rep_from_filename(filename: str, seed_to_rep_map: Optional[Dict[int, int]] = None) -> int:
+     """
+     Extracts the replication number from a file name.
+
+     Parameters
+     ----------
+     filename : str
+        The name of the file.
+     seed_to_rep_map : Optional[Dict[int, int]]
+        A dictionary mapping seed values to replication numbers (e.g., {40: 5, 70: 6}).
+
+     Returns
+     -------
+     int
+        The replication number.
+    
+     Raises
+     ------
+     ValueError
+        If the replication number cannot be determined.
+     """
+     if "rep" in filename.lower():
+          match = re.search(r"(\d+)", filename, re.IGNORECASE)
+          if match:
+               return int(match.group())
+     
+     match = re.search(r"(\d+)", filename, re.IGNORECASE)
+     if match:
+          seed = int(match.group())
+          if seed_to_rep_map is not None and seed in seed_to_rep_map:
+               return seed_to_rep_map[seed]
+          
+          return seed
+
+     raise ValueError(f"Cannot parse replication from filename: {filename}")
 
 
 def compute_metrics_from_embs_for_all_models(res_dir: str) -> None:
@@ -28,7 +461,7 @@ def compute_metrics_from_embs_for_all_models(res_dir: str) -> None:
      """
 
 
-def compute_metrics_from_embs_for_one_model(model_res_dir: str) -> None:
+def compute_metrics_from_embs_for_one_model(model_res_dir: str, compute_metrics_inversly: bool = True) -> None:
 
      """
      Compute metrics for the given model.
@@ -37,6 +470,14 @@ def compute_metrics_from_embs_for_one_model(model_res_dir: str) -> None:
      ----------
      model_res_dir: string
           The directory to save the results of the given model.
+     
+     compute_metrics_inversly: bool
+          Whether the function should compute metrics from the modality 2 to moality 1, if applicable.
+     
+     Returns
+     -------
+     None
+          Saves the resulting CSV file in the 'outs' directory in the given directory.
      """
      embs_dir = os.path.join(model_res_dir, "embs")
      if not os.path.isdir(embs_dir):
@@ -44,13 +485,79 @@ def compute_metrics_from_embs_for_one_model(model_res_dir: str) -> None:
      
      rna_embs_files = [f for f in os.listdir(embs_dir) if "rna" in f]
      atac_embs_files = [f for f in os.listdir(embs_dir) if "atac" in f]
-     labels_files = [f for f in os.listdir(embs_dir) if "label" in f]
+     labels_files = [f for f in os.listdir(embs_dir) if "label" in f] 
+     file_extension = extract_file_extension(rna_embs_files[0])
+     if file_extension == ".npy":
+          read_embs = read_embs_from_np
 
+     elif file_extension == ".csv":
+          read_embs = read_embs_from_csv
+     
+     else:
+          raise ValueError("Unsupported file extension. Embeddings should be stored as .npy or .csv files.")
 
+     seed_to_rep_map = {
+          0: 1,
+          10: 2,
+          20: 3, 
+          30: 4, 
+          40: 5, 
+          50: 6,
+          60: 7,
+          70: 8,
+          80: 9,
+          90: 10
+     }
+     
+     model_name = os.path.basename(model_res_dir)
+     res = []
+     for f_rna in rna_embs_files:
+          f_atac, f_lbls = find_matched_files(f_rna, atac_embs_files, labels_files)
+          seed = find_seed_from_filename(f_rna)
+          rep = find_rep_from_filename(f_rna, seed_to_rep_map)
+          rna_embs, atac_embs, lbls = read_embs([f_rna, f_atac, f_lbls])
+          cell_type_acc_joint, asw = assess_joint_from_separate_embs(atac_embs, rna_embs, lbls, seed)
+          recall_at_k_a2r, num_pairs_a2r, cell_type_acc_a2r, _, medr_a2r = assess(atac_embs, rna_embs, lbls, seed)
 
+          if compute_metrics_inversly:
+               recall_at_k_r2a, num_pairs_r2a, cell_type_acc_r2a, _, medr_r2a = assess(rna_embs, atac_embs, lbls, seed)
+               for k, v_a2r in recall_at_k_a2r.items():
+                    v_r2a = recall_at_k_r2a.get(k, 0)
+                    res.append({
+                         "Models": model_name,
+                         "Replicates":rep,
+                         "k": k,
+                         "Recall_at_k_a2r": v_a2r,
+                         "Recall_at_k_r2a": v_r2a if v_r2a is not None else 0.0,
+                         "num_pairs_a2r": num_pairs_a2r,
+                         "num_pairs_r2a": num_pairs_r2a if num_pairs_r2a is not None else 0.0,
+                         "cell_type_acc_a2r": cell_type_acc_a2r,
+                         "cell_type_acc_r2a": cell_type_acc_r2a if cell_type_acc_r2a is not None else 0.0,
+                         "cell_type_ASW": asw,
+                         "MedR_a2r": medr_a2r,
+                         "MedR_r2a": medr_r2a if medr_r2a is not None else 0.0,
+                         "cell_type_acc_joint": cell_type_acc_joint
+                    })
+          
+          else:
+               for k, v_a2r in recall_at_k_a2r.items():
+                    res.append({
+                        "Models": model_name,
+                         "Replicates": rep,
+                         "k": k,
+                         "Recall_at_k_a2r": v_a2r,
+                         "num_pairs_a2r": num_pairs_a2r,
+                         "cell_type_acc_a2r": cell_type_acc_a2r,
+                         "cell_type_ASW": asw,
+                         "MedR_a2r": medr_a2r
+                    })
+          
+          results = pd.DataFrame(res)
+          res_save_dir = os.path.join(model_res_dir, "outs")
+          os.makedirs(res_save_dir, exist_ok=True)
+          results.to_csv(os.path.join(res_save_dir, f"Metrics_{model_name}_10_reps_from_embs.csv"), index=False)
 
-
-
+                               
 def setup_logging(level:str, 
                   log_dir:str,
                   model_name:str) -> object:
@@ -82,6 +589,11 @@ def setup_logging(level:str,
           
      logging.info(f"Logs will be saved to {log_file}.")
 
+###########################################
+#                                         #
+#   Helper functions for runnig models    #
+#                                         #
+###########################################
 
 def impute_cells(labels):
     """Make same-size label arrays
