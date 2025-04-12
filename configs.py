@@ -108,6 +108,23 @@ plots = {
         
     },
 
+    "cell_type_accuracy_joint":{
+
+        "file_type":"pdf",
+        "fig_width":8,
+        "fig_height":6,
+        "x_axis_label":"",
+        "y_axis_label":"Joint Cell Type Accuracy",
+        "y_axis_label_fontsize":20,
+        "y_axis_range":(0, 0.8),
+        "xticks_positions":[0, 1, 2, 3, 4, 5],
+        "xticks_labels":["sCIN", "Con-AAE", "MOFA", "AE", "Harmony", "scBridge"],
+        "xticks_fontsize":18,
+        "xticks_rotation":45,
+        "yticks_fontsize":18
+        
+    },
+
     "median_rank":{
 
         "file_type":"pdf",
