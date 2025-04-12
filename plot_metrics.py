@@ -4,6 +4,7 @@ import anndata as ad
 from sCIN.plots import (plot_recall_at_k,
                         plot_asw,
                         plot_cell_type_accuracy,
+                        plot_cell_type_accuracy_joint,
                         plot_median_rank,
                         compute_tsne_original,
                         compute_tsne_embs,
@@ -45,6 +46,8 @@ def main() -> None:
         plot_asw(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "cell_type_accuracy":
         plot_cell_type_accuracy(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
+    elif args.plot == "cell_type_accuracy_joint":
+        plot_cell_type_accuracy_joint(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "median_rank":
         plot_median_rank(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "tsne_original":
