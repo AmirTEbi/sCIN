@@ -7,6 +7,7 @@ from matplotlib.lines import Line2D
 import matplotlib.gridspec as gridspec
 from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
+from sCIN.utils import extract_file_extension
 import seaborn as sns
 import colorcet as cc
 from typing import Union, List, Dict, Tuple, Any, Optional
@@ -187,6 +188,16 @@ def plot_cell_type_accuracy(data_frame: pd.DataFrame, configs:Dict[str, Any],
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
     
     return _plot_boxplot(data_frame, configs, save_dir, ax, y_col="cell_type_acc")
+
+
+def plot_cell_type_accuracy_joint(data_frame: pd.DataFrame, configs:Dict[str, Any], 
+                                  save_dir:str=None, ax:plt.Axes=None):
+    
+    configs = configs["cell_type_accuracy_joint"]
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
+    
+    return _plot_boxplot(data_frame, configs, save_dir, ax, y_col="cell_type_acc_joint")
 
 
 def _normalize_median_rank(data_frame:pd.DataFrame):
@@ -424,7 +435,7 @@ def _process_tsne_and_plot(
         labels_original_df.to_csv(labels_output_file, index=False)
 
         # Load embeddings files based on file extension
-        embs_ext = check_file_extension(mod1_embs_file)
+        embs_ext = extract_file_extension(mod1_embs_file)
         if embs_ext == ".npy":
             mod1_embs = np.load(mod1_embs_file)
             mod2_embs = np.load(mod2_embs_file)
@@ -450,7 +461,7 @@ def _process_tsne_and_plot(
         labels_original_df = pd.read_csv(labels_original_file)
         labels_original = labels_original_df.values
 
-        tsne_ext = check_file_extension(tsne_reps_original_file)
+        tsne_ext = extract_file_extension(tsne_reps_original_file)
         if tsne_ext == ".npy":
             tsne_original = np.load(tsne_reps_original_file)
             tsne_embs = np.load(tsne_reps_embs_file)
