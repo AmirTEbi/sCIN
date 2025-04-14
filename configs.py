@@ -1,3 +1,5 @@
+import seaborn as sns
+
 # ========= Models ========= 
 
 MOFA = {
@@ -38,6 +40,22 @@ ConAAE = {
 
 # ========= Plots ========= 
 
+
+model_order = ["Con-AAE", "sCIN", "scBridge", "MOFA", "AE", "Harmony", "scGLUE"]
+
+
+model_palette = {
+    "Con-AAE": "#d53e4f",
+    "sCIN": "#fc8d59",
+    "scBridge": "#fee08b",
+    "scGLUE":"#ffffbf",
+    "MOFA": "#e6f598",
+    "AE": "#99d594",
+    "Auto Encoder":"#99d594",        
+    "Harmony": "#3288bd"
+}
+
+
 plots = {
     "recall_at_k":{
 
@@ -53,7 +71,7 @@ plots = {
             "Con-AAE":"Con-AAE",
             "MOFA":"MOFA",
             "Harmony":"Harmony",
-            "AE":"Autoencoder",
+            "AE":"Auto Encoder",
             "scBridge":"scBridge",
             "scGLUE":"scGLUE"
         },
@@ -82,8 +100,8 @@ plots = {
         "y_axis_label":"ASW",
         "y_axis_label_fontsize":20,
         "y_label_fontsize":20,
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
-        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "AutoEncoder", "scBridge", "scGLUE", "SnapATAC2"],
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
+        "xticks_labels":['Con-AAE', 'sCIN', 'scBridge', 'MOFA', 'scGLUE', 'AE', 'Harmony'],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18,
@@ -117,8 +135,8 @@ plots = {
         "y_axis_label":"Joint Cell Type Accuracy",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4, 5],
-        "xticks_labels":["sCIN", "Con-AAE", "MOFA", "AE", "Harmony", "scBridge"],
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
+        "xticks_labels":["Con-AAE", "scBridge", "sCIN", "MOFA", "AE", "Harmony"],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18
@@ -135,7 +153,7 @@ plots = {
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
         "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
-        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge", "scGLUE"],
+        "xticks_labels":[],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18

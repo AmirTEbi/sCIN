@@ -13,7 +13,7 @@ from sCIN.plots import (plot_recall_at_k,
                         plot_all)
 from sCIN.utils import extract_file_extension
 from sklearn.model_selection import train_test_split
-from configs import plots
+from configs import plots, model_palette
 import argparse
 
 
@@ -36,6 +36,7 @@ def main() -> None:
     args = parser.parse_args()
 
     metrics_data_frame = pd.read_csv(args.metric_file_path)
+    metrics_data_frame["Models"] = metrics_data_frame["Models"].replace("AE", "Auto Encoder")
 
     if args.plot == "recall_at_k":
         plot_recall_at_k(metrics_data_frame, 
