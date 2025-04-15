@@ -8,7 +8,7 @@ import matplotlib.gridspec as gridspec
 from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
 from sCIN.utils import extract_file_extension
-from configs import model_palette 
+from configs import model_palette, model_order 
 import seaborn as sns
 import colorcet as cc
 from typing import *
@@ -102,6 +102,7 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
                      save_dir: str = None, ax: plt.Axes = None, 
                      fixed_palette: Dict[str, str] = model_palette):
 
+    data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
     configs = configs["recall_at_k"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
@@ -161,21 +162,24 @@ def _plot_boxplot(data_frame: pd.DataFrame, configs: Dict[str, Any], save_dir: s
                   y_col: str, order_ascending: bool = False, pre_process: callable = None,
                   fixed_palette: Dict[str, str] = None) -> plt.Axes:
 
+    data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
     if pre_process is not None:
         data_frame = pre_process(data_frame)
     
     # Compute model order based on metric
     
-    order = (
-        data_frame.groupby("Models")[y_col]
-        .median()
-        .sort_values(ascending=order_ascending)
-        .index
-        .tolist()
-    )
+    # order = (
+    #     data_frame.groupby("Models")[y_col]
+    #     .median()
+    #     .sort_values(ascending=order_ascending)
+    #     .index
+    #     .tolist()
+    # )
     # if "AE" in order:
     #     idx = order.index("AE")
     #     order[idx] = "Auto Encoder"
+
+    order = [m for m in model_order if m in data_frame["Models"].unique()]
 
     print(order)
     

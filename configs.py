@@ -41,18 +41,17 @@ ConAAE = {
 # ========= Plots ========= 
 
 
-model_order = ["Con-AAE", "sCIN", "scBridge", "MOFA", "AE", "Harmony", "scGLUE"]
+model_order = ["sCIN", "Con-AAE", "scBridge", "scGLUE", "MOFA", "Autoencoder", "Harmony"]
 
 
 model_palette = {
-    "Con-AAE": "#d53e4f",
-    "sCIN": "#fc8d59",
-    "scBridge": "#fee08b",
-    "scGLUE":"#ffffbf",
-    "MOFA": "#e6f598",
-    "AE": "#99d594",
-    "Auto Encoder":"#99d594",        
-    "Harmony": "#3288bd"
+    "Con-AAE": "#e41a1c",
+    "sCIN": "#377eb8",
+    "scBridge": "#4daf4a",
+    "scGLUE":"#984ea3",
+    "MOFA": "#ff7f00",
+    "Autoencoder":"#a65628",        
+    "Harmony": "#a6cee3"
 }
 
 
@@ -71,7 +70,7 @@ plots = {
             "Con-AAE":"Con-AAE",
             "MOFA":"MOFA",
             "Harmony":"Harmony",
-            "AE":"Auto Encoder",
+            "Autoencoder":"Autoencoder",
             "scBridge":"scBridge",
             "scGLUE":"scGLUE"
         },

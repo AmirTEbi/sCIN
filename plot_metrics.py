@@ -36,7 +36,6 @@ def main() -> None:
     args = parser.parse_args()
 
     metrics_data_frame = pd.read_csv(args.metric_file_path)
-    metrics_data_frame["Models"] = metrics_data_frame["Models"].replace("AE", "Auto Encoder")
 
     if args.plot == "recall_at_k":
         plot_recall_at_k(metrics_data_frame, 
