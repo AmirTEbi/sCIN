@@ -1,10 +1,13 @@
-from ..sCIN.sCIN import train_sCIN, get_emb_sCIN
-from ..configs import sCIN
-from ..sCIN.utils import extract_counts, append_rows
-from ..sCIN.assess import assess
+from sCIN.sCIN import train_sCIN, get_emb_sCIN
+from configs import sCIN
+from sCIN.utils import extract_counts
+from sCIN.assess import assess, assess_joint_from_separate_embs
 from sklearn.model_selection import train_test_split
 import anndata as ad
 import pandas as pd
+import numpy as np
+import torch 
+import random
 import os
 import argparse
 
@@ -32,8 +35,17 @@ def main() -> None:
 
     res = []
     for i, seed in enumerate(seeds):
+
+        # Control randomness
+        torch.manual_seed(seeds)
+        torch.random.manual_seed(seeds)
+        torch.cuda.manual_seed_all(seeds)
+        np.random.seed(seeds)
+        random.seed(seeds)
         
         rep = i + 1
+
+        # Train/test data split
         rna_train, rna_test, atac_train, atac_test, \
             labels_train, labels_test = train_test_split(rna_counts,
                                                          atac_counts,
@@ -47,7 +59,8 @@ def main() -> None:
                                 labels_train, 
                                 settings=sCIN,
                                 save_dir=args.save_dir,
-                                rep=rep, is_pca=True)
+                                rep=rep, 
+                                is_pca=True)
         
         rna_embs, atac_embs = get_emb_sCIN(rna_test, 
                                            atac_test,
@@ -69,6 +82,11 @@ def main() -> None:
                                                                                   rna_embs, 
                                                                                   labels_test, 
                                                                                   seed=seed)
+        
+        cell_type_acc_joint = assess_joint_from_separate_embs(mod1_embs=rna_embs,
+                                                              mod2_embs=atac_embs,
+                                                              labels=labels_test,
+                                                              seed=seed)
         if args.is_inv_metrics:
             recall_at_k_r2a, num_pairs_r2a, cell_type_acc_r2a, _, medr_r2a = assess(rna_embs, 
                                                                                     atac_embs, 
@@ -89,11 +107,12 @@ def main() -> None:
                 "cell_type_acc_r2a":cell_type_acc_r2a if cell_type_acc_r2a is not None else 0.0,
                 "cell_type_ASW":asw,
                 "MedR_a2r":medr_a2r,
-                "MedR_r2a":medr_r2a if medr_r2a is not None else 0.0
+                "MedR_r2a":medr_r2a if medr_r2a is not None else 0.0,
+                "cell_type_acc_joint":cell_type_acc_joint
             })            
             
     results = pd.DataFrame(res)
-    results.to_csv(os.path.join(args.save_dir, "outs", f"metrics_sCIN_{args.num_reps}reps.csv"))
+    results.to_csv(os.path.join(args.save_dir, "outs", f"metrics_sCIN_{args.num_reps}reps.csv"), index=False)
 
 
 if __name__ == "__main__":
