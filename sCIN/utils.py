@@ -1179,4 +1179,29 @@ def make_unpaired_random(mod1, mod2, labels, seed, num_mod2_ct=5):
           mod1_new[mod2_cells] = np.nan
           mod1_lbls_new[mod2_cells] = -1
 
-     return mod1_new, mod1_lbls_new, mod2_new, mod2_lbls_new
+     return mod1_new, mod1_lbls_new, mod2_new, 
+
+
+def encode_cell_types(anndata: ad.AnnData) -> ad.AnnData:
+     """
+     Encode cell type labels to integers in (0, num_cell_types).
+
+     Parameters
+     ----------
+     adata: ad.AnnData
+          Input data
+     
+     Returns
+     -------
+     ad.AnnData
+          Modified anndata with 'cell_type_encoded' in 'obs' layer
+          and 'cell_type_mapping' in 'uns' layer.
+     """
+     if not isinstance(anndata.obs["cell_type"].dtype, pd.CategoricalDtype):
+          anndata.obs["cell_type"] = anndata.obs["cell_type"].astype("category")
+
+     anndata.obs["cell_type_encoded"] = anndata.obs["cell_type"].cat.codes.to_numpy()
+     cell_type_mapping = dict(enumerate(anndata.obs["cell_type"].cat.categories))
+     anndata.uns["cell_type_mapping"] = cell_type_mapping
+
+     return anndata
