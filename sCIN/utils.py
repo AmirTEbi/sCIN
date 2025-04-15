@@ -62,8 +62,6 @@ def extend_gene_regions(gtf_df: pd.DataFrame, extension: int = 2000) -> pd.DataF
      pd.DataFrame
           Updated gtf_df with necessary columns for downstream tasks.
      """
-
-     gtf_df = gtf_df.copy()
      plus_strand = gtf_df["Strand"] == "+"
      minus_strand = ~plus_strand
 
@@ -160,12 +158,11 @@ def compute_gene_activity(atac_ad: ad.AnnData,
      # Read GTF file
      gtf = pr.read_gtf(gtf_file_path)
      gtf_df = gtf.df
-     gtf_df_cp = gtf_df.copy()
      print("Head of the GTF annotations:")
-     gtf_df_cp.head()
+     print(gtf_df.head())
 
      # Correct gene_id 
-     gtf_df_cp = _remove_dot_in_gene_ids(gtf_df_cp)
+     gtf_df = _remove_dot_in_gene_ids(gtf_df)
 
      std_chrs = {f'chr{i}' for i in range(1, 23)} | {"chrX", "chrY", "chrM"}
 
@@ -180,7 +177,7 @@ def compute_gene_activity(atac_ad: ad.AnnData,
      peaks_ranges = process_ATAC_peaks_for_gene_act(atac_ad, rename_dict, std_chrs)
 
      # Process GTF
-     gene_ranges = process_GTF_for_gene_act(gtf_df_cp, std_chrs, feature_type="transcript")
+     gene_ranges = process_GTF_for_gene_act(gtf_df, std_chrs, feature_type="transcript")
 
      # Overlap ATAC peaks with gene regions
      overlap_df = peaks_ranges.join(gene_ranges, how="left").df
@@ -215,14 +212,21 @@ def compute_gene_activity(atac_ad: ad.AnnData,
           else:
                gene_activity[:, i] = atac_ad[:, peak_names].X.sum(axis=1)
           
-          # Save the ouput
-          gene_act_ad = ad.AnnData(X=gene_activity)
-          gene_act_ad.var["gene_id"] = pd.Series(genes).astype(str)
-          if "cell_type" in atac_ad.obs.columns:
-               gene_act_ad.obs["CellType"] = atac_ad.obs["cell_type"]
-          else:
-               print("Warning: 'cell_type' column not found in ATAC AnnData.obs.")
-          gene_act_ad.write(os.path.join(save_dir, "gene_activity.h5ad"))
+     # Save the ouput
+     gene_act_ad = ad.AnnData(X=gene_activity)
+     genes_str = [str(g) for g in genes]
+     # print(pd.Series(genes).fillna("").astype(str))
+     gene_ids = pd.Series(genes).fillna("").astype(str).apply(lambda x: str(x).strip())
+     gene_act_ad.var["gene_id"] = gene_ids.values
+     print(gene_act_ad.var["gene_id"].head())
+     print(gene_act_ad.var["gene_id"].dtype)
+     print(type(gene_act_ad.var["gene_id"].iloc[0]))
+
+     if "cell_type" in atac_ad.obs.columns:
+          gene_act_ad.obs["CellType"] = atac_ad.obs["cell_type"]
+     else:
+          print("Warning: 'cell_type' column not found in ATAC AnnData.obs.")
+     gene_act_ad.write(os.path.join(save_dir, "gene_activity.h5ad"))
      
      return None
 
