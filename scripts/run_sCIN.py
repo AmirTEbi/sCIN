@@ -16,8 +16,9 @@ def main() -> None:
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--data")
-    parser.add_argument("--mod1_file")
-    parser.add_argument("--mod2_file")
+    parser.add_argument("--mod1_file", type=str)
+    parser.add_argument("--mod2_file", type=str)
+    parser.add_argument("--save_dir", type=str)
     parser.add_argument("--is_inv_metrics", action="store_true")
     parser.add_argument("--num_reps", type=int)  # max 10
     args = parser.parse_args()
