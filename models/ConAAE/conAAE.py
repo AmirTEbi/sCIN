@@ -3,10 +3,7 @@ import torch
 import torch.utils.data
 from torch import nn, optim
 from torch.autograd import Variable
-import pandas as pd
-from sCIN.models.ConAAE.model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
-import os
-import argparse
+from ..ConAAE.model import FC_Autoencoder, FC_Classifier, FC_VAE, Simple_Classifier,TripletLoss
 import time
 
 #os.environ['CUDA_VISIBLE_DEVICES'] = '1'
@@ -414,7 +411,7 @@ class conAAE:
       ATAC_class_label=np.concatenate((ATAC_class_label,atac_labels.numpy()),axis=0)
       
       # TEMP
-      np.save(save_dir + f"/labels_test_{seed}.npy", ATAC_class_label)
+      # np.save(save_dir + f"/labels_test_{seed}.npy", ATAC_class_label)
       
       #rna_inputs=rna_inputs.cuda()
       #atac_inputs=atac_inputs.cuda()
