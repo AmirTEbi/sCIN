@@ -41,7 +41,8 @@ ConAAE = {
 # ========= Plots ========= 
 
 
-model_order = ["sCIN", "Con-AAE", "scBridge", "scGLUE", "MOFA", "Autoencoder", "Harmony"]
+# model_order = ["sCIN", "Con-AAE", "scBridge", "scGLUE", "MOFA", "Autoencoder", "Harmony"]
+model_order = ["Paired", "50%", "20%", "10%", "5%", "1%", "Random"]
 
 
 model_palette = {
@@ -58,7 +59,7 @@ model_palette = {
 plots = {
     "recall_at_k":{
 
-        "file_type":"pdf",
+        "file_type":"png",
         "fig_width":8,
         "fig_height":6,
         "err_bar_format":"-",
@@ -92,7 +93,7 @@ plots = {
 
     "ASW":{
 
-        "file_type":"pdf",
+        "file_type":"png",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",
@@ -110,7 +111,7 @@ plots = {
 
     "cell_type_accuracy":{
 
-        "file_type":"pdf",
+        "file_type":"png",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",
@@ -127,7 +128,7 @@ plots = {
 
     "cell_type_accuracy_joint":{
 
-        "file_type":"pdf",
+        "file_type":"png",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",
@@ -144,7 +145,7 @@ plots = {
 
     "median_rank":{
 
-        "file_type":"pdf",
+        "file_type":"png",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",

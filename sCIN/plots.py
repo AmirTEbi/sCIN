@@ -3,6 +3,7 @@ import anndata as ad
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mp
 from matplotlib.lines import Line2D
 import matplotlib.gridspec as gridspec
 from sklearn.manifold import TSNE
@@ -15,6 +16,10 @@ from typing import *
 import itertools
 import os
 import re
+
+
+mp.rcParams["backend"] = "PDF"  # Set this to 'AGG' for PNG format. More on https://matplotlib.org/stable/users/explain/figure/backends.html#the-builtin-backends. 
+mp.rc("font", family="serif")
 
 
 def _make_palette(models: List[str], palette_name: str = "Paired", fixed_palette: Dict[str, str] = None) -> Dict[str, str]:
@@ -103,6 +108,9 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
                      fixed_palette: Dict[str, str] = model_palette):
 
     data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
+    data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
+                                                        ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
+
     configs = configs["recall_at_k"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
@@ -151,7 +159,9 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
     ax.spines["right"].set_visible(False)
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"RatK_by_models.{configs['file_type']}")
+    # out = os.path.join(save_dir, f"RatK_by_models.{configs['file_type']}")
+    out = os.path.join(save_dir, f"RatK_by_models")
+
     plt.savefig(out)
     plt.close(fig)
 
@@ -163,6 +173,8 @@ def _plot_boxplot(data_frame: pd.DataFrame, configs: Dict[str, Any], save_dir: s
                   fixed_palette: Dict[str, str] = None) -> plt.Axes:
 
     data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
+    data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
+                                                        ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
     if pre_process is not None:
         data_frame = pre_process(data_frame)
     
@@ -219,7 +231,9 @@ def _plot_boxplot(data_frame: pd.DataFrame, configs: Dict[str, Any], save_dir: s
     
     plt.tight_layout()
     
-    out = os.path.join(save_dir, f"{y_col}_by_models.{configs['file_type']}")
+    # out = os.path.join(save_dir, f"{y_col}_by_models.{configs['file_type']}")
+    out = os.path.join(save_dir, f"{y_col}_by_models")
+
     plt.savefig(out)
     
     return ax
