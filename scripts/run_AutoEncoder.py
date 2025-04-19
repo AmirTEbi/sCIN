@@ -1,22 +1,36 @@
-from ..models.AutoEncoder import train_AutoEncoder, get_emb_AutoEncoder
-from ..configs import AutoEncoder
-from ..sCIN.utils import extract_counts, append_rows_has_inverse
-from ..sCIN.assess import assess
+from models.Autoencoder import train_Autoencoder, get_emb_Autoencoder
+from configs import AutoEncoder
+from sCIN.utils import extract_counts, setup_logging
+from sCIN.assess import assess, assess_joint_from_separate_embs
 from sklearn.model_selection import train_test_split
 import anndata as ad
 import pandas as pd
+import numpy as np
+import torch
 import os
+import logging
+import random
 import argparse
+
+def setup_args():
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--rna_file", type=str)
+    parser.add_argument("--atac_file", type=str)
+    parser.add_argument("--save_dir", type=str)
+    parser.add_argument("--is_inv_metrics", action="store_true")
+    parser.add_argument("--num_reps", type=int)  # max 10
+
+    return parser
 
 
 def main() -> None:
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--data")
-    parser.add_argument("--mod1_file")
-    parser.add_argument("--mod2_file")
-    parser.add_argument("--num_reps", type=int)  # max 10
+    parser = setup_args()
     args = parser.parse_args()
+
+    log_save_dir = os.path.join(args.save_dir, "logs")
+    setup_logging(level="info", log_dir=log_save_dir, model_name="Autoencoder")
 
     # Set seeds for replications
     seeds = [seed for seed in range(0, 100, 10)]
@@ -24,55 +38,100 @@ def main() -> None:
         seeds = seeds[:args.num_reps]
 
     # Read data
-    mod1_adata = ad.read_h5ad(args.mod1_file)
-    mod2_adata = ad.read_h5ad(args.mod2_file)
-    mod1_counts, mod2_counts = extract_counts(mod1_adata, mod2_adata)
-    labels = mod1_adata.obs["cell_type_encoded"].values
+    logging.info("Reading data files ...")
+    rna_adata = ad.read_h5ad(args.rna_file)
+    atac_adata = ad.read_h5ad(args.atac_file)
+    rna_counts, atac_counts = extract_counts(rna_adata, atac_adata)
+    labels = rna_adata.obs["cell_type_encoded"].values
+    logging.info("Reading data files completed!")
 
     res = []
     for i, seed in enumerate(seeds):
         
+        torch.manual_seed(seed)
+        torch.random.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+
         rep = i + 1
-        mod1_train, mod1_test, mod2_train, mod2_test, \
-            _, labels_test = train_test_split(mod1_counts,
-                                              mod2_counts,
-                                              labels,
-                                              test_size=0.3,
-                                              random_state=seed)
+        logging.info(f"Replication {rep} ...")
+
+        logging.info(f"Splitting data with seed {seed}")
+        rna_train, rna_test, atac_train, atac_test, \
+            labels_train, labels_test = train_test_split(rna_counts,
+                                                         atac_counts,
+                                                         labels,
+                                                         test_size=0.3,
+                                                         random_state=seed)
         
-        # train
-        train_dict = train_AutoEncoder(mod1_train, mod2_train,
-                                       settings=AutoEncoder, is_pca=True,
-                                       rep=rep)
+        logging.info(f"Training is about to start ...")
+        train_dict = train_Autoencoder(rna_train, atac_train,
+                                       settings=AutoEncoder, 
+                                       is_pca=True,
+                                       rep=rep,
+                                       save_dir=args.save_dir)
         
-        # Get embeddings
-        mod1_embs, mod2_embs = get_emb_AutoEncoder(mod1_test, mod2_test,
+        logging.info(f"Computing embeddings ...")
+        rna_embs, atac_embs = get_emb_Autoencoder(rna_test, 
+                                                   atac_test,
                                                    labels_test=labels_test,
-                                                   train_dict=train_dict)
+                                                   train_dict=train_dict,
+                                                   is_pca=True)
+        logging.info(f"Embeddings computed!")
 
         # Save outputs
-        mod1_embs_df = pd.DataFrame(mod1_embs)
-        mod2_embs_df = pd.DataFrame(mod2_embs)
+        embs_save_dir = os.path.join(args.save_dir, "embs")
+        os.makedirs(embs_save_dir, exist_ok=True)
+        rna_embs_df = pd.DataFrame(rna_embs)
+        atac_embs_df = pd.DataFrame(atac_embs)
         labels_df = pd.DataFrame(labels_test)
-        mod1_embs_df.to_csv(os.path.join(args.save_dir, "embs", f"mod1_embs_{rep}.csv"), index=False)
-        mod2_embs_df.to_csv(os.path.join(args.save_dir, "embs", f"mod2_embs_{rep}.csv"), index=False)
-        labels_df.to_csv(os.path.join(args.save_dir, "embs", f"labels_test_{rep}.csv"), index=False)
+        rna_embs_df.to_csv(os.path.join(embs_save_dir, f"rna_embs_rep{rep}.csv"), index=False)
+        atac_embs_df.to_csv(os.path.join(embs_save_dir, f"atac_embs_rep{rep}.csv"), index=False)
+        labels_df.to_csv(os.path.join(embs_save_dir, f"labels_test_rep{rep}.csv"), index=False)
+        logging.info(f"Embeddings and test labels saved to {embs_save_dir}.")
+
 
         # Compute metrics
-        recall_at_k_12, num_pairs_12, cell_type_acc_12, asw = assess(
-            mod1_embs, mod2_embs, labels_test, seed=seed
-        )
-
-        recall_at_k_21, num_pairs_21, cell_type_acc_21, asw = assess(
-            mod2_embs, mod1_embs, labels_test, seed=seed
-        )
-
-        res = append_rows_has_inverse(res, rep, recall_at_k_12, num_pairs_12,
-                                      cell_type_acc_12, asw, recall_at_k_21,
-                                      num_pairs_21, cell_type_acc_21)
-    
+        logging.info("Computing metrics on embeddings ...")
+        recall_at_k_a2r, num_pairs_a2r, cell_type_acc_a2r, asw, medr_a2r = assess(atac_embs, 
+                                                                                  rna_embs, 
+                                                                                  labels_test, 
+                                                                                  seed=seed)
+        
+        cell_type_acc_joint, _ = assess_joint_from_separate_embs(mod1_embs=rna_embs,
+                                                                 mod2_embs=atac_embs,
+                                                                 labels=labels_test,
+                                                                 seed=seed)
+        if args.is_inv_metrics:
+            logging.info("is_inv_metrics has been set, so metrics from RNA to ATAC will be computed ...")
+            recall_at_k_r2a, num_pairs_r2a, cell_type_acc_r2a, _, medr_r2a = assess(rna_embs, 
+                                                                                    atac_embs, 
+                                                                                    labels_test, 
+                                                                                    seed=seed)
+        for k, v_a2r in recall_at_k_a2r.items():
+            v_r2a = recall_at_k_r2a.get(k, 0)
+            res.append({
+                "Models":"Autoencoder",
+                "Replicates":i+1,
+                "k":k,
+                "Recall_at_k_a2r":v_a2r,
+                "Recall_at_k_r2a":v_r2a,
+                "num_pairs_a2r":num_pairs_a2r,
+                "num_pairs_r2a":num_pairs_r2a if num_pairs_r2a is not None else 0.0,
+                "cell_type_acc_a2r":cell_type_acc_a2r,
+                "cell_type_acc_r2a":cell_type_acc_r2a if cell_type_acc_r2a is not None else 0.0,
+                "cell_type_ASW":asw,
+                "MedR_a2r":medr_a2r,
+                "MedR_r2a":medr_r2a if medr_r2a is not None else 0.0,
+                "cell_type_acc_joint":cell_type_acc_joint
+            })            
+            
     results = pd.DataFrame(res)
-    results.to_csv(os.path.join(args.save_dir, "outs", f"metrics_AutoEncoder_{args.num_reps}reps.csv"))
+    res_save_dir = os.path.join(args.save_dir, "outs")
+    os.makedirs(res_save_dir, exist_ok=True)
+    results.to_csv(os.path.join(res_save_dir, f"metrics_AE_{args.num_reps}reps.csv"), index=False)
+    logging.info(f"All experiments finished and results saved to {res_save_dir}!")
 
 
 if __name__ == "__main__":

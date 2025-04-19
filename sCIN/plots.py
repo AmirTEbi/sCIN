@@ -3,22 +3,40 @@ import anndata as ad
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib as mp
 from matplotlib.lines import Line2D
 import matplotlib.gridspec as gridspec
 from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split
+from sCIN.utils import extract_file_extension
+from configs import model_palette, model_order 
 import seaborn as sns
 import colorcet as cc
-from typing import Union, List, Dict, Tuple, Any, Optional
+from typing import *
+import itertools
 import os
 import re
 
 
-def _make_palette(models:List[str], palette_name:str="Paired") -> Dict[str,str]:
-
-    palette = sns.color_palette(palette_name, len(models))
-    
-    return {model:palette[i] for i, model in enumerate(models)}
+def _make_palette(models: List[str], palette_name: str = "Paired", fixed_palette: Dict[str, str] = None) -> Dict[str, str]:
+    if fixed_palette:
+        missing = [m for m in models if m not in fixed_palette]
+        print(f"missing: {missing}")
+        fallback_colors = sns.color_palette(palette_name, len(missing))
+        
+        # Cycle through fallback colors, ensuring we have enough for the missing models
+        color_cycle = itertools.cycle(fallback_colors)
+        
+        complete_palette = {}
+        for model in models:
+            if model in fixed_palette:
+                complete_palette[model] = fixed_palette[model]
+            else:
+                complete_palette[model] = next(color_cycle)  # Get the next color from the cycle
+        return complete_palette
+    else:
+        palette = sns.color_palette(palette_name, len(models))
+        return {model: palette[i] for i, model in enumerate(models)}
 
 
 def _group_data(data_frame:pd.DataFrame, based_on:Union[str, list], 
@@ -47,16 +65,25 @@ def _draw_err_bars(ax:plt.Axes, grouped_data:pd.DataFrame, category:str, x:str, 
     return ax
 
 
-def _handle_legend(grouped_data:pd.DataFrame, based_on:str, colors=Dict[str,str], 
-                   legend_names:Dict[str,str]=None, linewidth:int=4) -> list:
-
+def _handle_legend(
+    grouped_data: pd.DataFrame,
+    based_on: str,
+    colors: Dict[str, str],
+    legend_names: Dict[str, str],
+    order: List[str],  # Explicit order for alignment
+    linewidth: int = 4
+) -> list:
+    # Create legend entries in the specified order
     legend_handles = [
         Line2D(
-            [0], [0], color=colors[item], linewidth=linewidth, 
-            label=legend_names.get(item, item)  
-        ) for item in grouped_data[based_on].unique()
+            [0], [0],
+            color=colors[model],
+            linewidth=linewidth,
+            label=legend_names.get(model, model)  # Use display name
+        )
+        for model in order
+        if model in grouped_data[based_on].unique()  # Ensure model exists in data
     ]
-
     return legend_handles
 
 
@@ -72,21 +99,39 @@ def _draw_legend(ax:plt.Axes, location:str, position:Tuple[float, float], title:
     return ax
 
 
-def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str, Any], 
-                     save_dir:str=None, ax:plt.Axes=None):
-    
+def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any], 
+                     save_dir: str = None, ax: plt.Axes = None, 
+                     fixed_palette: Dict[str, str] = model_palette,
+                     plot_inv: bool = False):
+
+    data_frame["Models"] = data_frame["Models"].replace(["AE", "MOFA"], ["Autoencoder", "MOFA+"])
+    data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
+                                                        ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
+
     configs = configs["recall_at_k"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
-
     else:
         fig = ax.get_figure()
-    
-    models = data_frame["Models"].unique().tolist()
-    colors = _make_palette(models)
 
-    grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k")
+    if "Recall_at_k_a2r" in data_frame.columns:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k_a2r")
+    
+    elif plot_inv and "Recall_at_k_r2a" in data_frame.columns:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k_r2a")
+    
+    else:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k")
+
     grouped_data_stats = _compute_stats_on_grouped_data(grouped_data, stats=["mean", "std"])
+
+    max_k = grouped_data_stats["k"].max()
+    models_order = (
+        grouped_data_stats[grouped_data_stats["k"] == max_k]
+        .sort_values("mean", ascending=False)["Models"]
+        .tolist()
+    )
+    colors = _make_palette(models=models_order, fixed_palette=fixed_palette)
 
     ax = _draw_err_bars(ax, grouped_data_stats, category="Models", x="k", y="mean", colors=colors,
                         err_range="std", bar_format=configs["err_bar_format"], 
@@ -104,6 +149,7 @@ def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str, Any],
                       based_on="Models",
                       colors=colors,
                       legend_names=configs["legend_names"],
+                      order=models_order,
                       linewidth=configs["legend_linewidth"])
     
     ax.set_xlabel("k", fontsize=configs["x_axis_fontsize"])
@@ -118,52 +164,88 @@ def plot_recall_at_k(data_frame:pd.DataFrame, configs:Dict[str, Any],
     ax.spines["right"].set_visible(False)
 
     plt.tight_layout()
-    out = os.path.join(save_dir, f"RatK_by_models.{configs['file_type']}")
+    # out = os.path.join(save_dir, f"RatK_by_models.{configs['file_type']}")
+    out = os.path.join(save_dir, f"RatK_by_models")
+
     plt.savefig(out)
     plt.close(fig)
 
     return ax
 
 
-def _plot_boxplot(data_frame:pd.DataFrame, configs:Dict[str, Any], save_dir:str, ax:plt.Axes,
-                  y_col:str, pre_process:callable=None) -> plt.Axes:
-    """
-    A helper function to draw a boxplot.
-    """
+def _plot_boxplot(data_frame: pd.DataFrame, configs: Dict[str, Any], save_dir: str, ax: plt.Axes,
+                  y_col: str, order_ascending: bool = False, pre_process: callable = None,
+                  fixed_palette: Dict[str, str] = None) -> plt.Axes:
+
+    data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
+    data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
+                                                        ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
     if pre_process is not None:
         data_frame = pre_process(data_frame)
     
-    models = data_frame["Models"].unique().tolist()
-    colors = _make_palette(models)
+    # Compute model order based on metric
     
-    ax = sns.boxplot(x="Models", y=y_col, data=data_frame, palette=colors)
+    # order = (
+    #     data_frame.groupby("Models")[y_col]
+    #     .median()
+    #     .sort_values(ascending=order_ascending)
+    #     .index
+    #     .tolist()
+    # )
+    # if "AE" in order:
+    #     idx = order.index("AE")
+    #     order[idx] = "Auto Encoder"
+
+    order = [m for m in model_order if m in data_frame["Models"].unique()]
+
+    print(order)
     
+    colors = _make_palette(models=order, fixed_palette=fixed_palette)
+    
+    ax = sns.boxplot(x="Models", y=y_col, data=data_frame, palette=colors, order=order)
     ax.set_xlabel(configs["x_axis_label"])
     ax.set_ylabel(configs["y_axis_label"], fontsize=configs["y_axis_label_fontsize"])
+
+    # legend_handles = _handle_legend(
+    #     grouped_data=data_frame,
+    #     based_on="Models",
+    #     colors=colors,
+    #     legend_names=configs["legend_names"],
+    #     order=order,  # Pass computed order
+    #     linewidth=configs.get("legend_linewidth", 4)
+    # )
+
+    # ax.legend(
+    #     handles=legend_handles,
+    #     title=configs.get("legend_title", ""),
+    #     loc=configs.get("legend_location", "best"),
+    #     fontsize=configs.get("legend_fontsize", 12)
+    # )
     
     if "xticks_positions" in configs:
         ax.set_xticks(configs["xticks_positions"])
-        ax.set_xticklabels(configs["xticks_labels"],
+        ax.set_xticklabels(order,
                            fontsize=configs["xticks_fontsize"],
                            rotation=configs["xticks_rotation"])
     else:
         ax.set_xticklabels([], fontsize=configs["xticks_fontsize"])
     
     ax.tick_params(axis="y", labelsize=configs["yticks_fontsize"])
-    
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     
     plt.tight_layout()
     
-    out = os.path.join(save_dir, f"{y_col}_by_models.{configs['file_type']}")
+    # out = os.path.join(save_dir, f"{y_col}_by_models.{configs['file_type']}")
+    out = os.path.join(save_dir, f"{y_col}_by_models")
+
     plt.savefig(out)
     
     return ax
 
 
 def plot_asw(data_frame: pd.DataFrame, configs:Dict[str, Any], 
-             save_dir: str = None, ax: plt.Axes = None):
+             save_dir: str = None, ax: plt.Axes = None, fixed_palette: Dict[str, str] = model_palette):
     """
    
     """
@@ -174,19 +256,59 @@ def plot_asw(data_frame: pd.DataFrame, configs:Dict[str, Any],
     else:
         fig = ax.get_figure()
     
-    ax = _plot_boxplot(data_frame, configs, save_dir, ax, y_col="cell_type_ASW")
+    ax = _plot_boxplot(data_frame, configs, save_dir, ax,
+                         y_col="cell_type_ASW", order_ascending=False,
+                         fixed_palette=fixed_palette)
     
     return ax
     
 
-def plot_cell_type_accuracy(data_frame: pd.DataFrame, configs:Dict[str, Any], 
-                            save_dir:str=None, ax:plt.Axes=None):
+def plot_cell_type_accuracy(data_frame: pd.DataFrame, 
+                            configs:Dict[str, Any], 
+                            save_dir:str=None, ax:plt.Axes=None, 
+                            fixed_palette: Dict[str, str] = model_palette,
+                            plot_inv: bool = False):
 
     configs = configs["cell_type_accuracy"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
     
-    return _plot_boxplot(data_frame, configs, save_dir, ax, y_col="cell_type_acc")
+    if "cell_type_acc_a2r" in data_frame.columns:
+        return _plot_boxplot(data_frame, 
+                             configs, 
+                             save_dir, 
+                             ax, 
+                             y_col="cell_type_acc_a2r", 
+                             order_ascending=False, 
+                             fixed_palette=fixed_palette)
+    elif plot_inv and "cell_type_acc_r2a" in data_frame.columns:
+        return _plot_boxplot(data_frame, 
+                             configs, 
+                             save_dir, 
+                             ax, 
+                             y_col="cell_type_acc_r2a", 
+                             order_ascending=False, 
+                             fixed_palette=fixed_palette)
+    else:    
+        return _plot_boxplot(data_frame, 
+                             configs, 
+                             save_dir, 
+                             ax, 
+                             y_col="cell_type_acc", 
+                             order_ascending=False, 
+                             fixed_palette=fixed_palette)
+
+
+def plot_cell_type_accuracy_joint(data_frame: pd.DataFrame, configs: Dict[str, Any],
+                                  save_dir: str = None, ax: plt.Axes = None,
+                                  fixed_palette: Dict[str, str] = model_palette):
+    configs = configs["cell_type_accuracy_joint"]
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
+    
+    return _plot_boxplot(data_frame, configs, save_dir, ax,
+                         y_col="cell_type_acc_joint", order_ascending=False,
+                         fixed_palette=fixed_palette)
 
 
 def _normalize_median_rank(data_frame:pd.DataFrame):
@@ -197,18 +319,45 @@ def _normalize_median_rank(data_frame:pd.DataFrame):
     return data_frame
     
 
-def plot_median_rank(data_frame: pd.DataFrame, configs:Dict[str, Any], 
-                     save_dir:str=None, ax:plt.Axes=None):
+def _normalize_median_rank_a2r(data_frame:pd.DataFrame):
 
-    configs = configs["cell_type_accuracy"]
+    data_frame["norm_med_rank"] = (data_frame["MedR_a2r"] - data_frame["MedR_a2r"].min()) / \
+        (data_frame["MedR_a2r"].max() - data_frame["MedR_a2r"].min())
+    
+    return data_frame
+
+
+def _normalize_median_rank_r2a(data_frame:pd.DataFrame):
+
+    data_frame["norm_med_rank"] = (data_frame["MedR_r2a"] - data_frame["MedR_r2a"].min()) / \
+        (data_frame["MedR_r2a"].max() - data_frame["MedR_r2a"].min())
+    
+    return data_frame
+
+
+def plot_median_rank(data_frame: pd.DataFrame, 
+                     configs:Dict[str, Any], 
+                     save_dir:str=None, 
+                     ax:plt.Axes=None, 
+                     fixed_palette: Dict[str, str] = model_palette,
+                     plot_inv: bool = False):
+    
+    if "MedR_a2r" in data_frame.columns:
+        data_frame = _normalize_median_rank_a2r(data_frame)
+    
+    elif plot_inv and "MedR_r2a" in data_frame.columns:
+        data_frame = _normalize_median_rank_r2a(data_frame)
+    
+    else:
+        data_frame = _normalize_median_rank(data_frame)
+
+    configs = configs["median_rank"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
-
-    else:
-        fig = ax.get_figure()
     
-    return _plot_boxplot(data_frame, configs, save_dir, ax, 
-                         y_col="MedR", pre_process=_normalize_median_rank)
+    return _plot_boxplot(data_frame, configs, save_dir, ax,
+                         y_col="norm_med_rank", order_ascending=False,
+                         fixed_palette=fixed_palette)
 
 
 def compute_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, 
@@ -424,7 +573,7 @@ def _process_tsne_and_plot(
         labels_original_df.to_csv(labels_output_file, index=False)
 
         # Load embeddings files based on file extension
-        embs_ext = check_file_extension(mod1_embs_file)
+        embs_ext = extract_file_extension(mod1_embs_file)
         if embs_ext == ".npy":
             mod1_embs = np.load(mod1_embs_file)
             mod2_embs = np.load(mod2_embs_file)
@@ -450,7 +599,7 @@ def _process_tsne_and_plot(
         labels_original_df = pd.read_csv(labels_original_file)
         labels_original = labels_original_df.values
 
-        tsne_ext = check_file_extension(tsne_reps_original_file)
+        tsne_ext = extract_file_extension(tsne_reps_original_file)
         if tsne_ext == ".npy":
             tsne_original = np.load(tsne_reps_original_file)
             tsne_embs = np.load(tsne_reps_embs_file)

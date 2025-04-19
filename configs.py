@@ -1,3 +1,5 @@
+import seaborn as sns
+
 # ========= Models ========= 
 
 MOFA = {
@@ -38,10 +40,25 @@ ConAAE = {
 
 # ========= Plots ========= 
 
+
+model_order = ["sCIN", "Con-AAE", "scBridge", "scGLUE", "MOFA", "Autoencoder", "Harmony"]
+# model_order = ["Paired", "50%", "20%", "10%", "5%", "1%", "Random"]
+
+
+model_palette = {
+    "Con-AAE": "#e41a1c",
+    "sCIN": "#377eb8",
+    "scBridge": "#4daf4a",
+    "scGLUE":"#984ea3",
+    "MOFA": "#ff7f00",
+    "Autoencoder":"#a65628",        
+    "Harmony": "#a6cee3"
+}
+
+
 plots = {
     "recall_at_k":{
 
-        "file_type":"pdf",
         "fig_width":8,
         "fig_height":6,
         "err_bar_format":"-",
@@ -53,7 +70,7 @@ plots = {
             "Con-AAE":"Con-AAE",
             "MOFA":"MOFA",
             "Harmony":"Harmony",
-            "AE":"Autoencoder",
+            "Autoencoder":"Autoencoder",
             "scBridge":"scBridge",
             "scGLUE":"scGLUE"
         },
@@ -75,15 +92,14 @@ plots = {
 
     "ASW":{
 
-        "file_type":"pdf",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",
         "y_axis_label":"ASW",
         "y_axis_label_fontsize":20,
         "y_label_fontsize":20,
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
-        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "AutoEncoder", "scBridge", "scGLUE", "SnapATAC2"],
+        "xticks_positions":[0, 1, 2, 3, 4, 5],
+        "xticks_labels":['Con-AAE', 'sCIN', 'scBridge', 'MOFA', 'scGLUE', 'AE', 'Harmony'],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18,
@@ -93,15 +109,30 @@ plots = {
 
     "cell_type_accuracy":{
 
-        "file_type":"pdf",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",
         "y_axis_label":"Cell Type Accuracy",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
+        "xticks_positions":[0, 1, 2, 3, 4, 5],
         "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge", "scGLUE"],
+        "xticks_fontsize":18,
+        "xticks_rotation":45,
+        "yticks_fontsize":18
+        
+    },
+
+    "cell_type_accuracy_joint":{
+
+        "fig_width":8,
+        "fig_height":6,
+        "x_axis_label":"",
+        "y_axis_label":"Joint Cell Type Accuracy",
+        "y_axis_label_fontsize":20,
+        "y_axis_range":(0, 0.8),
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
+        "xticks_labels":["Con-AAE", "scBridge", "sCIN", "MOFA", "AE", "Harmony"],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18
@@ -110,15 +141,14 @@ plots = {
 
     "median_rank":{
 
-        "file_type":"pdf",
         "fig_width":8,
         "fig_height":6,
         "x_axis_label":"",
         "y_axis_label":"Normalized Median Rank",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
-        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge", "scGLUE"],
+        "xticks_positions":[0, 1, 2, 3, 4],
+        "xticks_labels":[],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18

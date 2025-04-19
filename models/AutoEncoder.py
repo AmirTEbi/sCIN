@@ -179,7 +179,7 @@ class SimpleAutoEncoder(nn.Module):
         return mod1_recon, mod2_recon, mod1_emb, mod2_emb
     
 
-def train_AutoEncoder(mod1_train, mod2_train, settings=None, **kwargs):
+def train_Autoencoder(mod1_train, mod2_train, settings=None, **kwargs):
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -242,7 +242,9 @@ def train_AutoEncoder(mod1_train, mod2_train, settings=None, **kwargs):
         epoch_loss /= total_samples
         print(f"Epoch: {epoch}, Loss: {epoch_loss:.4f}")
     
-    torch.save(ae.state_dict(), os.path.join(save_dir, "models", f"AE_{rep}"))
+    model_save_dir = os.path.join(save_dir, "models")
+    os.makedirs(model_save_dir, exist_ok=True)
+    torch.save(ae.state_dict(), os.path.join(model_save_dir, f"AE_rep{rep}.pth"))
     train_dict = {"model":ae}
     if is_pca:
         train_dict["pca_mod1"] = pca_mod1
@@ -251,12 +253,11 @@ def train_AutoEncoder(mod1_train, mod2_train, settings=None, **kwargs):
     return train_dict
 
     
-def get_emb_AutoEncoder(mod1_test, mod2_test, train_dict, **kwargs):
+def get_emb_Autoencoder(mod1_test, mod2_test, train_dict, **kwargs):
      
      device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
      model = train_dict["model"]
-     seed = kwargs["seed"]
      is_pca = kwargs["is_pca"]
      if is_pca:
          pca_mod1 = train_dict["pca_mod1"]

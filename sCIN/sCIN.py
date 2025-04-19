@@ -5,8 +5,9 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.optim import Adam
 from sklearn.decomposition import PCA
-from sCIN.utils.utils import impute_cells
+from sCIN.utils import impute_cells
 from itertools import cycle
+from typing import *
 import os
 
 
@@ -25,18 +26,18 @@ class Mod1Encoder(nn.Module):
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
-        """Forward methods
+        """
+        Forward computation in the network.
 
         Parameters
         ----------
         x : torch.tensor
-            RNA count tensor
+            Mod1 data matrix
             
-
         Returns
         -------
-        z_rna : torch.tensor
-            RNA embeddings (Dimension: (x.shape[0], 128))
+        z_mod1 : torch.tensor
+            Mod1 embeddings 
         """
         h = self.linear1(x)
         h1 = self.bn(h)
@@ -61,27 +62,29 @@ class Mod2Encoder(nn.Module):
         self.relu = nn.LeakyReLU()
 
     def forward(self, x):
-        """Forward method
+        """
+        Forward computation in the network.
 
         Parameters
         ----------
         x : torch.tensor
-            ATAC count tensor
+            Mod2 count tensor
 
         Returns
         -------
-        z_atac : torch.tensor
-            ATAC embeddings (Dimension: (x.shape[0], 128))
+        z_mod2 : torch.tensor
+            Mod2 embeddings 
         """
         h = self.linear1(x)
-        h1 = self.bn(h)  # BatchNorm added before relu as Deep Learning (Bishop, 2023) suggests
+        h1 = self.bn(h)  
         h2 = self.relu(h1)
         z_mod2 = self.linear2(h2)
 
         return z_mod2
     
+
 class sCIN(nn.Module):
-    """ Contrastive learning model inspired by CLIP"""
+    """ The main implementation of sCIN."""
     def __init__(self, mod1_encoder, mod2_encoder, t): 
         super(sCIN, self).__init__()
         
@@ -91,29 +94,31 @@ class sCIN(nn.Module):
                                                self.mod1_encoder.latent_dim)))
         self.W_mod2 = nn.Parameter(torch.randn((self.mod2_encoder.latent_dim, 
                                                 self.mod2_encoder.latent_dim)))
-        self.t = nn.Parameter(torch.tensor(t))  # make 't' a learnable parameter
+        self.t = nn.Parameter(torch.tensor(t))  
 
-    def forward(self, rna, atac):
-        """Forward method
+
+    def forward(self, mod1_data: torch.tensor, mod2_data:torch.tensor):
+        """
+        Forward computation in the network.
 
         Parameters
         ----------
-        rna : torch.tensor
-            RNA count tensor
-        atac : torch.tensor
-            ATAC count tensor
+        mod1_data : torch.tensor
+                First modality data matrix.
+        mod2_data : torch.tensor
+            Second modality data matrix.
 
         Returns
         ----------
         logits : torch.tensor
-            Similarity matrix between RNA and ATAC embeddings
-        rna_emb : torch.tensor
-            RNA embeddings (Dimension: (rna.shape[0], 128))
-        atac_emb : torch.tensor
-            ATAC embeddings (Dimension: (atac.shape[0], 128))
+            Similarity matrix between mod1 and mod2 embeddings
+        mod1_emb : torch.tensor
+            Mod1 embeddings
+        mod2_emb : torch.tensor
+            Mod2 embeddings 
         """
-        mod1_f = self.mod1_encoder(rna)
-        mod2_f = self.mod2_encoder(atac)
+        mod1_f = self.mod1_encoder(mod1_data)
+        mod2_f = self.mod2_encoder(mod2_data)
         mod1_emb = F.normalize(torch.matmul(mod1_f, self.W_mod1), p=2, dim=1)
         mod2_emb = F.normalize(torch.matmul(mod2_f, self.W_mod2), p=2, dim=1)
         logits = torch.matmul(mod1_emb, mod2_emb.t()) * torch.exp(self.t)
@@ -121,9 +126,13 @@ class sCIN(nn.Module):
         return logits, mod1_emb, mod2_emb
 
 
-def train_sCIN(mod1_train: np.array, mod2_train: np.array, 
-               labels_train: list, settings: dict, 
-               **kwargs) -> dict:
+def train_sCIN(mod1_train: np.ndarray, 
+               mod2_train: np.ndarray, 
+               labels_train: np.ndarray, 
+               settings: Dict[str, Any],
+               save_dir: str, 
+               is_pca: Optional[bool] = True,
+               rep: Optional[Union[int, str]] = "NA") -> Dict[str, Any]:
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -133,9 +142,6 @@ def train_sCIN(mod1_train: np.array, mod2_train: np.array,
     hidden_dim = settings.get("hidden_dim", 256)
     latent_dim = settings.get("latent_dim", 128)
     bob = settings.get("bob", 10)
-    save_dir = kwargs["save_dir"]
-    rep = kwargs["replication"]
-    is_pca = kwargs["is_pca"]
     patience = settings.get("patience", 10)
     min_delta = settings.get("min_delta", 1e-4)
 
@@ -263,7 +269,7 @@ def pca_with_nans(data1, data2, n_components):
     return data1_pca, data2_pca, pca1, pca2
 
 
-def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array, 
+def train_sCIN_unpaired(mod1_train: np.ndarray, mod2_train: np.ndarray, 
                         labels_train: list, epochs: int, settings: dict, **kwargs) -> dict:
     """
     Train sCIN model in an unpaired setting.
@@ -405,16 +411,46 @@ def train_sCIN_unpaired(mod1_train: np.array, mod2_train: np.array,
     return train_dict
 
         
-def get_emb_sCIN(mod1_test, mod2_test, labels_test, 
-                 train_dict, save_dir, **kwargs):
+def get_emb_sCIN(mod1_test: np.ndarray, 
+                 mod2_test: np.ndarray, 
+                 train_dict: Dict[str, Any], 
+                 save_dir: str, 
+                 is_pca: Optional[bool] = True,
+                 rep: Optional[Union[int, str]] = "NA") -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Get embedding from unseen test data by the trained model.
+
+    Parameters
+    ----------
+    mod1_test: np.ndarray
+        First modality data matrix.
+
+    mod2_test: np.ndarray
+        Second modality data matrix.
+
+    train_dict: Dict[str, Any]
+        The outputs of the training function, including the trained model 
+        and the fitted PCA model for each modality.
+
+    save_dir: str
+        The directory to save the embeddings.
+
+    is_pca: Optional[bool]
+        Do you used PCA during training?
+    
+    rep: Optional[int]
+        In which replication are you?
+
+    Returns
+    -------
+    Tuple[np.ndarray, np.ndarray]
+        Embeddings for each modality.
+    
+    """
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     model = train_dict["model"]
-    seed = kwargs["seed"]
-    is_pca = kwargs["is_pca"]
-
-    rep = kwargs.get("rep", 0)
 
     if is_pca:
         print("PCA transformation of test data ...")

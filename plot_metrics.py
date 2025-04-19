@@ -4,6 +4,7 @@ import anndata as ad
 from sCIN.plots import (plot_recall_at_k,
                         plot_asw,
                         plot_cell_type_accuracy,
+                        plot_cell_type_accuracy_joint,
                         plot_median_rank,
                         compute_tsne_original,
                         compute_tsne_embs,
@@ -12,16 +13,19 @@ from sCIN.plots import (plot_recall_at_k,
                         plot_all)
 from sCIN.utils import extract_file_extension
 from sklearn.model_selection import train_test_split
-from configs import plots
+from configs import plots, model_palette
+import matplotlib as mp
 import argparse
 
 
-def main() -> None:
+def setup_args():
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--plot", help="Name of the plot.")
     parser.add_argument("--save_dir")
     parser.add_argument("--metric_file_path")
+    parser.add_argument("--matplot_backend", default="PDF")
+    parser.add_argument("--matplot_font",default="serif")
     parser.add_argument("--compute_tsne", action="store_true")
     parser.add_argument("--plot_tsne", action="store_true")
     parser.add_argument("--mod1_anndata_file")
@@ -32,7 +36,17 @@ def main() -> None:
     parser.add_argument("--tsne_original_reps_file")
     parser.add_argument("--original_labels_file")
     parser.add_argument("--tsne_embs_reps_file")
+
+    return parser
+
+
+def main() -> None:
+
+    parser = setup_args()
     args = parser.parse_args()
+
+    mp.rcParams["backend"] = args.matplot_backend  # Set this to 'AGG' for PNG format. More on https://matplotlib.org/stable/users/explain/figure/backends.html#the-builtin-backends. 
+    mp.rc("font", family=args.matplot_font)
 
     metrics_data_frame = pd.read_csv(args.metric_file_path)
 
@@ -45,6 +59,8 @@ def main() -> None:
         plot_asw(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "cell_type_accuracy":
         plot_cell_type_accuracy(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
+    elif args.plot == "cell_type_accuracy_joint":
+        plot_cell_type_accuracy_joint(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "median_rank":
         plot_median_rank(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "tsne_original":

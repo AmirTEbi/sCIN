@@ -1,44 +1,50 @@
-import anndata as ad
-import sccross
-import pandas as pd
-from sCIN.assess import assess
-from sCIN.utils import setup_logging
+# from configs import scCross
+from sCIN.utils import extract_counts, setup_logging
+from sCIN.assess import assess, assess_joint_from_separate_embs
 from sklearn.model_selection import train_test_split
-from sklearn.decomposition import PCA, TruncatedSVD
-import argparse
-import logging
+import anndata as ad
+import pandas as pd
+import numpy as np
+import torch 
+import random
 import os
+import logging
+import argparse
 
-    
-def main() -> None:
+
+def setup_args():
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--rna_file")
-    parser.add_argument("--atac_file")
-    parser.add_argument("--gtf_file")
-    parser.add_argument("--save_dir")
-    parser.add_argument("--num_reps", type=int, choices=range(1, 11), help="Number of replications(1-10)")
+    parser.add_argument("--rna_file", type=str)
+    parser.add_argument("--atac_file", type=str)
+    parser.add_argument("--save_dir", type=str)
     parser.add_argument("--is_inv_metrics", action="store_true")
     parser.add_argument("--quick_test", action="store_true")
+    parser.add_argument("--num_reps", type=int)  # max 10
+
+    return parser
+
+
+def main() -> None:
+
+    parser = setup_args()
     args = parser.parse_args()
 
-    setup_logging(level="debug",
-                  log_dir=args.save_dir,
-                  model_name="scCross")
+    log_save_dir = os.path.join(args.save_dir, "logs")
+    setup_logging(level="info", log_dir=log_save_dir, model_name="sCIN")
 
-    rna = ad.read_h5ad(args.rna_file)
-    rna_counts = rna.layers["norm_raw_counts"]
-    atac = ad.read_h5ad(args.atac_file)
-    atac_counts = atac.layers["norm_raw_counts"]
-    labels = rna.obs["cell_type_encoded"].values
+    logging.info("Reading data files ...")
+    rna_adata = ad.read_h5ad(args.rna_file)
+    atac_adata = ad.read_h5ad(args.atac_file)
+    rna_counts, atac_counts = extract_counts(rna_adata, atac_adata)
+    labels = rna_adata.obs["cell_type_encoded"].values
+    logging.info("Reading data files completed!")
 
-    atac2rna = sccross.data.geneActivity(atac, gtf_file=args.gtf_file)
-    atac.uns["gene"] = atac2rna
-
+    # Set seeds for replications
     seeds = [seed for seed in range(0, 100, 10)]
     if args.num_reps != 10:
         seeds = seeds[:args.num_reps]
-
+    
     res = []
     for i, seed in enumerate(seeds):
         rep = i + 1
