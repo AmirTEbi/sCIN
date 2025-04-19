@@ -18,10 +18,6 @@ import os
 import re
 
 
-mp.rcParams["backend"] = "PDF"  # Set this to 'AGG' for PNG format. More on https://matplotlib.org/stable/users/explain/figure/backends.html#the-builtin-backends. 
-mp.rc("font", family="serif")
-
-
 def _make_palette(models: List[str], palette_name: str = "Paired", fixed_palette: Dict[str, str] = None) -> Dict[str, str]:
     if fixed_palette:
         missing = [m for m in models if m not in fixed_palette]
@@ -105,9 +101,10 @@ def _draw_legend(ax:plt.Axes, location:str, position:Tuple[float, float], title:
 
 def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any], 
                      save_dir: str = None, ax: plt.Axes = None, 
-                     fixed_palette: Dict[str, str] = model_palette):
+                     fixed_palette: Dict[str, str] = model_palette,
+                     plot_inv: bool = False):
 
-    data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
+    data_frame["Models"] = data_frame["Models"].replace(["AE", "MOFA"], ["Autoencoder", "MOFA+"])
     data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
                                                         ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
 
@@ -117,7 +114,15 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
     else:
         fig = ax.get_figure()
 
-    grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k")
+    if "Recall_at_k_a2r" in data_frame.columns:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k_a2r")
+    
+    elif plot_inv and "Recall_at_k_r2a" in data_frame.columns:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k_r2a")
+    
+    else:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="Recall_at_k")
+
     grouped_data_stats = _compute_stats_on_grouped_data(grouped_data, stats=["mean", "std"])
 
     max_k = grouped_data_stats["k"].max()
@@ -258,16 +263,40 @@ def plot_asw(data_frame: pd.DataFrame, configs:Dict[str, Any],
     return ax
     
 
-def plot_cell_type_accuracy(data_frame: pd.DataFrame, configs:Dict[str, Any], 
-                            save_dir:str=None, ax:plt.Axes=None, fixed_palette: Dict[str, str] = model_palette):
+def plot_cell_type_accuracy(data_frame: pd.DataFrame, 
+                            configs:Dict[str, Any], 
+                            save_dir:str=None, ax:plt.Axes=None, 
+                            fixed_palette: Dict[str, str] = model_palette,
+                            plot_inv: bool = False):
 
     configs = configs["cell_type_accuracy"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
     
-    return _plot_boxplot(data_frame, configs, save_dir, ax,
-                         y_col="cell_type_acc", order_ascending=False,
-                         fixed_palette=fixed_palette)
+    if "cell_type_acc_a2r" in data_frame.columns:
+        return _plot_boxplot(data_frame, 
+                             configs, 
+                             save_dir, 
+                             ax, 
+                             y_col="cell_type_acc_a2r", 
+                             order_ascending=False, 
+                             fixed_palette=fixed_palette)
+    elif plot_inv and "cell_type_acc_r2a" in data_frame.columns:
+        return _plot_boxplot(data_frame, 
+                             configs, 
+                             save_dir, 
+                             ax, 
+                             y_col="cell_type_acc_r2a", 
+                             order_ascending=False, 
+                             fixed_palette=fixed_palette)
+    else:    
+        return _plot_boxplot(data_frame, 
+                             configs, 
+                             save_dir, 
+                             ax, 
+                             y_col="cell_type_acc", 
+                             order_ascending=False, 
+                             fixed_palette=fixed_palette)
 
 
 def plot_cell_type_accuracy_joint(data_frame: pd.DataFrame, configs: Dict[str, Any],
@@ -290,10 +319,38 @@ def _normalize_median_rank(data_frame:pd.DataFrame):
     return data_frame
     
 
-def plot_median_rank(data_frame: pd.DataFrame, configs:Dict[str, Any], 
-                     save_dir:str=None, ax:plt.Axes=None, fixed_palette: Dict[str, str] = model_palette):
+def _normalize_median_rank_a2r(data_frame:pd.DataFrame):
 
-    data_frame = _normalize_median_rank(data_frame)
+    data_frame["norm_med_rank"] = (data_frame["MedR_a2r"] - data_frame["MedR_a2r"].min()) / \
+        (data_frame["MedR_a2r"].max() - data_frame["MedR_a2r"].min())
+    
+    return data_frame
+
+
+def _normalize_median_rank_r2a(data_frame:pd.DataFrame):
+
+    data_frame["norm_med_rank"] = (data_frame["MedR_r2a"] - data_frame["MedR_r2a"].min()) / \
+        (data_frame["MedR_r2a"].max() - data_frame["MedR_r2a"].min())
+    
+    return data_frame
+
+
+def plot_median_rank(data_frame: pd.DataFrame, 
+                     configs:Dict[str, Any], 
+                     save_dir:str=None, 
+                     ax:plt.Axes=None, 
+                     fixed_palette: Dict[str, str] = model_palette,
+                     plot_inv: bool = False):
+    
+    if "MedR_a2r" in data_frame.columns:
+        data_frame = _normalize_median_rank_a2r(data_frame)
+    
+    elif plot_inv and "MedR_r2a" in data_frame.columns:
+        data_frame = _normalize_median_rank_r2a(data_frame)
+    
+    else:
+        data_frame = _normalize_median_rank(data_frame)
+
     configs = configs["median_rank"]
     if ax is None:
         fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
