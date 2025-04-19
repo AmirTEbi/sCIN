@@ -552,10 +552,10 @@ def compute_metrics_from_embs_for_one_model(model_res_dir: str, compute_metrics_
                          "MedR_a2r": medr_a2r
                     })
           
-          results = pd.DataFrame(res)
-          res_save_dir = os.path.join(model_res_dir, "outs")
-          os.makedirs(res_save_dir, exist_ok=True)
-          results.to_csv(os.path.join(res_save_dir, f"Metrics_{model_name}_10_reps_from_embs.csv"), index=False)
+     results = pd.DataFrame(res)
+     res_save_dir = os.path.join(model_res_dir, "outs")
+     os.makedirs(res_save_dir, exist_ok=True)
+     results.to_csv(os.path.join(res_save_dir, f"Metrics_{model_name}_10_reps_from_embs.csv"), index=False)
 
                                
 def setup_logging(level:str, 
