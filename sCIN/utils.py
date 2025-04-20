@@ -599,7 +599,37 @@ def setup_logging(level:str,
 #                                         #
 ###########################################
 
-def impute_cells(labels):
+def  impute_cells(labels):
+    """Make same-size label arrays
+
+    Parameters
+    ----------
+    labels : numpy.ndarray
+        Array of the encoded cell types as integers.
+
+    Returns
+    -------
+
+    
+    """
+    indices_by_type = {label: np.where(labels == label)[0] for label in np.unique(labels)}
+    max_length = max(len(indices) for indices in indices_by_type.values())
+    imputed_indices_by_type = {}
+    for label, indices in indices_by_type.items():
+        current_length = len(indices)
+        if current_length < max_length:
+            add_indices = np.random.choice(indices, max_length - \
+                                           current_length, replace=True)
+            imputed_indices = np.concatenate([indices, add_indices])
+        else:
+            imputed_indices = indices
+        
+        imputed_indices_by_type[label] = imputed_indices
+    
+    return imputed_indices_by_type
+
+
+def  impute_cells_v1(labels: np.ndarray, shared_labels: List[Union[str, int]]):
     """Make same-size label arrays
 
     Parameters
