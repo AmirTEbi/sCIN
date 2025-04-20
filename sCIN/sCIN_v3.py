@@ -14,7 +14,7 @@ import os
 
 class Mod1Encoder(nn.Module):
     """ An encoder with three layers"""
-    def __init__(self, in_dim, hidden_dim, latent_dim):
+    def __init__(self, in_dim, hidden_dim, latent_dim, p_dropout=0.5):
         super(Mod1Encoder, self).__init__()
         self.in_dim = in_dim
         self.hidden_dim = hidden_dim
@@ -25,6 +25,8 @@ class Mod1Encoder(nn.Module):
         self.linear2 = nn.Linear(in_dim, hidden_dim)
         self.bn2 = nn.BatchNorm1d(hidden_dim)
         self.linear3 = nn.Linear(hidden_dim, latent_dim)
+
+        self.dropout = nn.Dropout(p=p_dropout)
     
         self.relu = nn.LeakyReLU()
 
@@ -45,6 +47,7 @@ class Mod1Encoder(nn.Module):
         h1 = self.linear1(x)
         h1 = self.bn1(h1)
         h1 = self.relu(h1)
+        h1 = self.dropout(h1)
         h2 = self.linear1(h1)
         h2 = self.bn1(h2)
         h2 = self.relu(h2)
