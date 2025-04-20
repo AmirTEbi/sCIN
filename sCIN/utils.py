@@ -642,7 +642,7 @@ def  impute_cells_v1(labels: np.ndarray, shared_labels: List[Union[str, int]]):
 
     
     """
-    indices_by_type = {label: np.where(labels == label)[0] for label in np.unique(labels)}
+    indices_by_type = {label: np.where(labels == label)[0] for label in np.unique(shared_labels)}
     max_length = max(len(indices) for indices in indices_by_type.values())
     imputed_indices_by_type = {}
     for label, indices in indices_by_type.items():
