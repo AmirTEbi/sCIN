@@ -177,12 +177,16 @@ def train_sCIN_v1(mod1_train: np.ndarray,
                   settings: Dict[str, Any],
                   save_dir: str, 
                   is_pca: Optional[bool] = True,
-                  rep: Optional[Union[int, str]] = "NA") -> Dict[str, Any]:
+                  rep: Optional[Union[int, str]] = "NA",
+                  num_epochs: Optional[int] = None) -> Dict[str, Any]:
     
     logger = setup_sCIN_logger()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    epochs = settings["epochs"]
+    if not num_epochs == None:
+        epochs = num_epochs
+
+    epochs = settings["num_epochs"]
     t = settings.get("t", 0.07)
     lr = settings.get("learning_rate", 1e-3)
     hidden_dim = settings.get("hidden_dim", 256)
