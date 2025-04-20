@@ -1,7 +1,8 @@
 import numpy as np
 from sklearn.metrics import silhouette_score
 from scipy.spatial.distance import cdist
-from typing import Tuple
+from sklearn.neighbors import NearestNeighbors
+from typing import *
 
 
 def compute_distance(mod1_embs:np.array, mod2_embs:np.array) -> np.array:
@@ -207,3 +208,41 @@ def assess_joint_from_separate_embs(mod1_embs: np.ndarray,
    asw = compute_norm_ASW(joint_embs, labels, seed=seed)
 
    return cell_type_acc, asw
+
+######## Unpaired ########
+
+def cell_type_at_k_unpaired(mod1_embs: np.ndarray,
+                            mod2_embs: np.ndarray,
+                            mod1_labels: np.ndarray,
+                            mod2_labels: np.ndarray,
+                            num_nbrs: List[int] = [10, 20, 30, 40, 50]) -> Dict[int, float]:
+   
+   ct_at_k = {}
+   for k in num_nbrs:
+      nbrs = NearestNeighbors(n_neighbors=k, algorithm="auto").fit(mod2_embs)
+      dists, indices = nbrs.kneighbors(mod1_embs)
+      nbrs_labels = mod2_labels[indices]
+      matches = (nbrs_labels == mod1_labels[:, None])
+      ct_at_k_all_cells = matches.sum(axis=1) / k 
+      mean_ct_at_k = ct_at_k_all_cells.mean()
+      ct_at_k[k] = mean_ct_at_k
+   
+   return ct_at_k
+
+
+def assess_unpaired(mod1_embs: np.ndarray, 
+                    mod2_embs: np.ndarray,
+                    mod1_labels: np.ndarray,
+                    mod2_labels: np.ndarray,
+                    seed: int) -> Tuple[Dict[int, float], int, float, float]:
+   
+   ct_at_k = cell_type_at_k_unpaired(mod1_embs, 
+                                     mod2_embs,
+                                     mod1_labels,
+                                     mod2_labels)
+   
+   joint_embs = np.concatenate((mod1_embs, mod2_embs), axis=0)
+   joint_lbls = np.concatenate((mod1_labels, mod2_labels), axis=0)
+   asw = compute_norm_ASW(joint_embs, joint_lbls, seed=seed)
+
+   return ct_at_k, asw
