@@ -2,6 +2,8 @@ import numpy as np
 from sklearn.metrics import silhouette_score
 from scipy.spatial.distance import cdist
 from sklearn.neighbors import NearestNeighbors
+from scipy.sparse import coo_matrix, csr_matrix  
+from scipy.sparse.csgraph import connected_components
 from typing import *
 
 
@@ -211,6 +213,115 @@ def assess_joint_from_separate_embs(mod1_embs: np.ndarray,
 
 ######## Unpaired ########
 
+def _build_knn_adj_graph(embs: np.ndarray, k: int) -> csr_matrix:
+   """
+    Build a symmetric k-NN adjacency matrix for all cells.
+
+    Parameters
+    ----------
+    embs : shape (n_cells, n_features)
+    k : number of neighbors (excluding self)
+
+    Returns
+    -------
+    csr_matrix : sparse adjacency of shape (n_cells, n_cells)
+    """
+   num_cells = embs.shape[0]
+   nbrs = NearestNeighbors(n_neighbors=k + 1, algorithm='auto').fit(embs)
+   _, indices = nbrs.kneighbors(embs)
+   indices = indices[:, 1:]  # Remove self
+
+   row = np.repeat(np.arange(num_cells), k)
+   col = indices.flatten()  
+   data = np.ones(len(row), dtype=bool)
+   adj = coo_matrix((data, (row, col)), shape=(num_cells, num_cells))
+   adj = adj + adj.T  # Make undirected
+   adj.data = np.clip(adj.data, 0, 1)
+
+   return adj.tocsr() 
+
+
+def compute_graph_connectivity(embs: np.ndarray, 
+                               labels: np.ndarray, 
+                               k: int = 15) -> float:
+   
+   """
+    Compute graph connectivity (GC) for a single modality embedding.
+
+    GC = (1 / M) * sum_j (LCC_j / N_j)
+    where LCC_j = size of largest connected component among cells of type j.
+    """
+   num_cells = embs.shape[0]
+   if labels.shape[0] != num_cells:
+      raise ValueError("embeddings and labels must have the same length")
+   
+   adj = _build_knn_adj_graph(embs, k)
+   unique_labels, _ = np.unique(labels, return_counts=True)
+
+   scores = []
+   for lbl in unique_labels:
+      idx = np.where(labels == lbl)[0]
+      sub = adj[idx][:, idx]
+      n_comp, comp_labels = connected_components(sub, directed=False)
+      sizes = np.bincount(comp_labels)
+      if idx.size > 0:
+         lcc_ratio = sizes.max() / idx.size 
+      
+      else: 
+         lcc_ratio = 0.0
+      
+      scores.append(lcc_ratio)
+   
+   return float(np.mean(scores))
+
+
+def compute_graph_connectivity_multimodal(embs_dict: Dict[str, np.ndarray], 
+                                          labels_dict: Dict[str, np.ndarray], 
+                                          k: int = 15, 
+                                          mode: str = "union") -> Union[float, Dict[str, float]]:
+
+   if mode == "uni-modal":
+        return {
+            m: compute_graph_connectivity(X, labels_dict[m], k)
+            for m, X in embs_dict.items()
+        }
+   
+   if mode == "joint":
+      joint_embs = np.concatenate(list(embs_dict.values()), axis=0)
+      joint_lbls = np.concatenate(list(labels_dict.values()), axis=0)
+      
+      return compute_graph_connectivity(joint_embs, joint_lbls, k)
+   
+   if mode == "union":
+      adjs = []
+      label_splits = []
+      offset = 0
+      for m in embs_dict:
+          embs = embs_dict[m]
+          lbls = labels_dict[m]
+          adj = _build_knn_adj_graph(embs, k)
+          adjs.append(adj)
+          label_splits.append((lbls, offset))
+          offset += embs.shape[0]
+      
+      combined = sum(adjs)
+      combined.data = np.clip(combined.data, 0, 1)
+      lbls_all = np.concatenate([y for y, _ in label_splits], axis=0)
+
+      unique_labels, _ = np.unique(lbls_all, return_counts=True)
+      scores = []
+      for lbl in unique_labels:
+         idx = np.where(lbls_all == lbl)[0]
+         sub = combined[idx][:, idx]
+         n_comp, comp_labels = connected_components(sub, directed=False)
+         sizes = np.bincount(comp_labels)
+         scores.append(sizes.max() / idx.size if idx.size > 0 else 0.0)
+      
+      return float(np.mean(scores))
+   
+   raise ValueError("mode must be one of 'individual', 'concat', or 'union'")
+
+
 def cell_type_at_k_unpaired(mod1_embs: np.ndarray,
                             mod2_embs: np.ndarray,
                             mod1_labels: np.ndarray,
@@ -244,5 +355,10 @@ def assess_unpaired(mod1_embs: np.ndarray,
    joint_embs = np.concatenate((mod1_embs, mod2_embs), axis=0)
    joint_lbls = np.concatenate((mod1_labels, mod2_labels), axis=0)
    asw = compute_norm_ASW(joint_embs, joint_lbls, seed=seed)
+   embs_dict = {"Mod1": mod1_embs, "Mod2": mod2_embs}
+   labels_dict = {"Mod1": mod1_labels, "Mod2": mod2_labels}
+   GC_uni = compute_graph_connectivity_multimodal(embs_dict, labels_dict, mode="uni-modal")
+   GC_joint = compute_graph_connectivity_multimodal(embs_dict, labels_dict, mode="joint")
+   GC_union = compute_graph_connectivity_multimodal(embs_dict, labels_dict, mode="union")
 
-   return ct_at_k, asw
+   return ct_at_k, asw, GC_uni, GC_joint, GC_union
