@@ -1,4 +1,4 @@
-from sCIN.sCIN_unpaired import train_sCIN_unpaired, get_emb_sCIN
+from sCIN.sCIN_unpaired import train_sCIN_unpaired, get_embs_sCIN_unpaired
 from configs import sCIN_unpaired
 from sCIN.utils import extract_counts, setup_logging
 from sCIN.assess import assess_unpaired
@@ -80,11 +80,11 @@ def main() -> None:
         logging.info("Training completed.")
 
         logging.info(f"Computing embeddings ...")
-        rna_embs, atac_embs = get_emb_sCIN(rna_test, 
-                                           atac_test,
-                                           train_dict=train_dict,
-                                           save_dir=args.save_dir,
-                                           rep=rep)
+        rna_embs, atac_embs = get_embs_sCIN_unpaired(rna_test, 
+                                                     atac_test,
+                                                     train_dict=train_dict,
+                                                     save_dir=args.save_dir,
+                                                     rep=rep)
         logging.info(f"Embeddings computed!")
 
         # Save outputs
@@ -102,17 +102,17 @@ def main() -> None:
 
         # Compute metrics
         logging.info("Computing metrics on embeddings ...")
-        ct_at_k_a2r, asw = assess_unpaired(mod1_embs=atac_embs,
-                                           mod2_embs=rna_embs,
-                                           mod1_labels=rna_lbls_test,
-                                           mod2_labels=atac_lbls_test,
-                                           seed=seed)
+        ct_at_k_a2r, asw, GC_uni, GC_joint, GC_union = assess_unpaired(mod1_embs=atac_embs,
+                                                                       mod2_embs=rna_embs,
+                                                                       mod1_labels=rna_lbls_test,
+                                                                       mod2_labels=atac_lbls_test,
+                                                                       seed=seed)
         if args.is_inv_metrics:
-            ct_at_k_r2a, _ = assess_unpaired(mod1_embs=atac_embs,
-                                             mod2_embs=rna_embs,
-                                             mod1_labels=rna_lbls_test,
-                                             mod2_labels=atac_lbls_test,
-                                             seed=seed)
+            ct_at_k_r2a, _, _, _, _ = assess_unpaired(mod1_embs=atac_embs,
+                                                      mod2_embs=rna_embs,
+                                                      mod1_labels=rna_lbls_test,
+                                                      mod2_labels=atac_lbls_test,
+                                                      seed=seed)
         
         for k, v_a2r in ct_at_k_a2r.items():
             v_r2a = ct_at_k_r2a.get(k, 0)
@@ -122,7 +122,10 @@ def main() -> None:
                 "k":k,
                 "cell_type_at_k_a2r":v_a2r,
                 "cell_type_at_k_r2a":v_r2a if v_r2a is not None else 0.0,
-                "cell_type_ASW":asw
+                "cell_type_ASW":asw,
+                "GC_uni":GC_uni,
+                "GC_joint":GC_joint,
+                "GC_union":GC_union
             })
             
    
