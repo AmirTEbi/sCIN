@@ -5,7 +5,7 @@ sCIN is a neural network framework inspired based on Constrastive Learning for s
 ![sCIN workflow](sCIN_framework.png)
 Preprint: https://www.biorxiv.org/content/10.1101/2025.02.03.636095v1 
 
-_sCIN codebsae is currently undergoing major revisions ans refactoring and some files deleted or change. The tutorial will be updated soon._
+_sCIN codebsae is currently undergoing major revisions ans refactorings and some files are deleted or changed. The tutorial will be updated soon._
 
 ## Installation
 
