@@ -177,7 +177,7 @@ def _plot_boxplot(data_frame: pd.DataFrame, configs: Dict[str, Any], save_dir: s
                   y_col: str, order_ascending: bool = False, pre_process: callable = None,
                   fixed_palette: Dict[str, str] = None) -> plt.Axes:
 
-    data_frame["Models"] = data_frame["Models"].replace({"AE": "Autoencoder"})
+    data_frame["Models"] = data_frame["Models"].replace(["AE", "MOFA"], ["Autoencoder", "MOFA+"])
     data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
                                                         ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
     if pre_process is not None:

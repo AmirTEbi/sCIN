@@ -41,7 +41,7 @@ ConAAE = {
 # ========= Plots ========= 
 
 
-model_order = ["sCIN", "Con-AAE", "scBridge", "scGLUE", "MOFA", "Autoencoder", "Harmony"]
+model_order = ["sCIN", "Con-AAE", "scBridge", "scGLUE", "sciCAN", "MOFA+", "Autoencoder", "Harmony"]
 # model_order = ["Paired", "50%", "20%", "10%", "5%", "1%", "Random"]
 
 
@@ -50,9 +50,10 @@ model_palette = {
     "sCIN": "#377eb8",
     "scBridge": "#4daf4a",
     "scGLUE":"#984ea3",
-    "MOFA": "#ff7f00",
+    "MOFA+": "#ff7f00",
     "Autoencoder":"#a65628",        
-    "Harmony": "#a6cee3"
+    "Harmony": "#a6cee3",
+    "sciCAN": "#666666"
 }
 
 
@@ -68,11 +69,12 @@ plots = {
         "legend_names":{
             "sCIN":"sCIN",
             "Con-AAE":"Con-AAE",
-            "MOFA":"MOFA",
+            "MOFA+":"MOFA+",
             "Harmony":"Harmony",
             "Autoencoder":"Autoencoder",
             "scBridge":"scBridge",
-            "scGLUE":"scGLUE"
+            "scGLUE":"scGLUE",
+            "sciCAN":"sciCAN"
         },
         "legend_location":"lower center",
         "legend_position":(0.365, 0.68),
@@ -98,8 +100,8 @@ plots = {
         "y_axis_label":"ASW",
         "y_axis_label_fontsize":20,
         "y_label_fontsize":20,
-        "xticks_positions":[0, 1, 2, 3, 4, 5],
-        "xticks_labels":['Con-AAE', 'sCIN', 'scBridge', 'MOFA', 'scGLUE', 'AE', 'Harmony'],
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
+        "xticks_labels":['Con-AAE', 'sCIN', 'scBridge', 'scGLUE', 'sciCAN', 'MOFA+', 'Autoencoder', 'Harmony'],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18,
@@ -115,8 +117,8 @@ plots = {
         "y_axis_label":"Cell Type Accuracy",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4, 5],
-        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA", "Autoencoder", "scBridge", "scGLUE"],
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
+        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA+", "Autoencoder", "scBridge", "scGLUE", "sciCAN"],
         "xticks_fontsize":18,
         "xticks_rotation":45,
         "yticks_fontsize":18
@@ -147,7 +149,7 @@ plots = {
         "y_axis_label":"Normalized Median Rank",
         "y_axis_label_fontsize":20,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4],
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
         "xticks_labels":[],
         "xticks_fontsize":18,
         "xticks_rotation":45,
