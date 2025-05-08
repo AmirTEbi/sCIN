@@ -2,6 +2,9 @@ import pandas as pd
 import numpy as np
 import anndata as ad
 from sCIN.plots import (plot_recall_at_k,
+                        plot_cell_type_at_k,
+                        plot_cell_type_at_k_v1,
+                        plot_GC_joint,
                         plot_asw,
                         plot_cell_type_accuracy,
                         plot_cell_type_accuracy_joint,
@@ -24,7 +27,7 @@ def setup_args():
     parser.add_argument("--plot", help="Name of the plot.")
     parser.add_argument("--save_dir")
     parser.add_argument("--metric_file_path")
-    parser.add_argument("--matplot_backend", default="PDF")
+    parser.add_argument("--matplot_backend", default="AGG")
     parser.add_argument("--matplot_font",default="sans")
     parser.add_argument("--fig_dpi",default=300)
     parser.add_argument("--savefig_dpi",default=300)
@@ -67,6 +70,15 @@ def main() -> None:
         plot_cell_type_accuracy_joint(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "median_rank":
         plot_median_rank(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
+    elif args.plot == "cell_type_at_k":
+        plot_cell_type_at_k(metrics_data_frame, configs=plots, save_dir=args.save_dir)
+        # plot_cell_type_at_k_v1(metrics_data_frame, configs=plots, save_dir=args.save_dir)
+
+    elif args.plot == "GC_joint":
+        plot_GC_joint(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
+
+
+
     elif args.plot == "tsne_original":
         if args.compute_tsne:
             cfg = plots["tSNE_original"]

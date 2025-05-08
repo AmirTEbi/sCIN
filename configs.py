@@ -60,12 +60,12 @@ model_palette = {
 plots = {
     "recall_at_k":{
 
-        "fig_width":8,
-        "fig_height":6,
+        "fig_width":12,
+        "fig_height":9,
         "err_bar_format":"-",
         "err_bar_capsize":5,
-        "err_bar_capthick":1,
-        "err_bar_linewidth":2,
+        "err_bar_capthick":5,
+        "err_bar_linewidth":6,
         "legend_names":{
             "sCIN":"sCIN",
             "Con-AAE":"Con-AAE",
@@ -77,51 +77,104 @@ plots = {
             "sciCAN":"sciCAN"
         },
         "legend_location":"lower center",
-        "legend_position":(0.365, 0.68),
+        "legend_position":(0.365, 0.65),
         "legend_title":"",
         "legend_num_cols":2,
-        "legend_fontsize":18,
+        "legend_fontsize":30,
         "legend_frame":False,
-        "legend_linewidth":4,
-        "x_axis_fontsize":20,
-        "y_axis_fontsize":20,
+        "legend_linewidth":8,
+        "x_axis_fontsize":35,
+        "y_axis_fontsize":35,
         "xticks_positions":[10, 20, 30, 40, 50],
-        "xticks_fontsize":18,
-        "yticks_fontsize":18,
+        "xticks_fontsize":30,
+        "yticks_fontsize":30,
         "y_axis_range":(0, 0.40)
+
+    },
+
+    "cell_type_at_k":{
+
+        "fig_width":12,
+        "fig_height":9,
+        "err_bar_format":"-",
+        "err_bar_capsize":5,
+        "err_bar_capthick":5,
+        "err_bar_linewidth":6,
+        "legend_names":{
+            "sCIN":"sCIN",
+            "Con-AAE":"Con-AAE",
+            "MOFA+":"MOFA+",
+            "Harmony":"Harmony",
+            "Autoencoder":"Autoencoder",
+            "scBridge":"scBridge",
+            "scGLUE":"scGLUE",
+            "sciCAN":"sciCAN"
+        },
+        "legend_location":"lower center",
+        "legend_position":(0.55, 0.87),
+        "legend_title":"",
+        "legend_num_cols":4,
+        "legend_fontsize":30,
+        "legend_frame":False,
+        "legend_linewidth":8,
+        "legend_columnspacing":0.5,
+        "legend_handletextpad":10,
+        "x_axis_fontsize":35,
+        "y_axis_fontsize":35,
+        "xticks_positions":[10, 20, 30, 40, 50],
+        "xticks_fontsize":30,
+        "yticks_fontsize":30,
+        "y_axis_range":(0, 1.15)
 
     },
 
     "ASW":{
 
-        "fig_width":8,
-        "fig_height":6,
+        "fig_width":12,
+        "fig_height":9,
         "x_axis_label":"",
         "y_axis_label":"ASW",
-        "y_axis_label_fontsize":20,
-        "y_label_fontsize":20,
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
+        "y_axis_label_fontsize":35,
+        "y_label_fontsize":35,
+        "xticks_positions":[0, 1, 2, 3],
         "xticks_labels":['Con-AAE', 'sCIN', 'scBridge', 'scGLUE', 'sciCAN', 'MOFA+', 'Autoencoder', 'Harmony'],
-        "xticks_fontsize":18,
+        "xticks_fontsize":30,
         "xticks_rotation":45,
-        "yticks_fontsize":18,
+        "yticks_fontsize":30,
+        "y_axis_range":(0, 0.8)
+
+    },
+
+    "GC_joint":{
+
+        "fig_width":12,
+        "fig_height":9,
+        "x_axis_label":"",
+        "y_axis_label":"Graph Connectivity",
+        "y_axis_label_fontsize":35,
+        "y_label_fontsize":35,
+        "xticks_positions":[0, 1, 2, 3],
+        "xticks_labels":['Con-AAE', 'sCIN', 'scBridge', 'scGLUE', 'sciCAN', 'MOFA+', 'Autoencoder', 'Harmony'],
+        "xticks_fontsize":30,
+        "xticks_rotation":45,
+        "yticks_fontsize":30,
         "y_axis_range":(0, 0.8)
 
     },
 
     "cell_type_accuracy":{
 
-        "fig_width":8,
-        "fig_height":6,
+        "fig_width":12,
+        "fig_height":9,
         "x_axis_label":"",
         "y_axis_label":"Cell Type Accuracy",
-        "y_axis_label_fontsize":20,
+        "y_axis_label_fontsize":35,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
-        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA+", "Autoencoder", "scBridge", "scGLUE", "sciCAN"],
-        "xticks_fontsize":18,
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
+        "xticks_labels":["sCIN", "Con-AAE", "Harmony", "MOFA+", "Autoencoder", "scGLUE", "sciCAN"],
+        "xticks_fontsize":30,
         "xticks_rotation":45,
-        "yticks_fontsize":18
+        "yticks_fontsize":30
         
     },
 
@@ -143,17 +196,17 @@ plots = {
 
     "median_rank":{
 
-        "fig_width":8,
-        "fig_height":6,
+        "fig_width":12,
+        "fig_height":9,
         "x_axis_label":"",
         "y_axis_label":"Normalized Median Rank",
-        "y_axis_label_fontsize":20,
+        "y_axis_label_fontsize":35,
         "y_axis_range":(0, 0.8),
-        "xticks_positions":[0, 1, 2, 3, 4, 5, 6, 7],
+        "xticks_positions":[0, 1, 2, 3, 4, 5, 6],
         "xticks_labels":[],
-        "xticks_fontsize":18,
+        "xticks_fontsize":30,
         "xticks_rotation":45,
-        "yticks_fontsize":18
+        "yticks_fontsize":30
 
     },
 

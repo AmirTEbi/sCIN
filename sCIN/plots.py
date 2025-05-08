@@ -88,12 +88,12 @@ def _handle_legend(
 
 
 def _draw_legend(ax:plt.Axes, location:str, position:Tuple[float, float], title:str="", num_cols:int=1, 
-                font_size:int=18, is_framed:bool=False, **handle_kwargs) -> plt.Axes:
+                font_size:int=18, is_framed:bool=False, columnspacing:float=0.5, handletextpad=0.3, **handle_kwargs) -> plt.Axes:
     
     legend_handles = _handle_legend(**handle_kwargs)
     ax.legend(
         handles=legend_handles, title=title, fontsize=font_size, loc=location, 
-        bbox_to_anchor=position, ncols=num_cols, frameon=is_framed
+        bbox_to_anchor=position, ncols=num_cols, frameon=is_framed, columnspacing=columnspacing, handletextpad=handletextpad
     )
 
     return ax
@@ -145,6 +145,8 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
                       num_cols=configs["legend_num_cols"],
                       font_size=configs["legend_fontsize"],
                       is_framed=configs["legend_frame"],
+                      columnspacing = configs["legend_columnspacing"],
+                      handletextpad = configs["legend_handletextpad"],
                       grouped_data=grouped_data_stats,
                       based_on="Models",
                       colors=colors,
@@ -167,6 +169,160 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
     # out = os.path.join(save_dir, f"RatK_by_models.{configs['file_type']}")
     out = os.path.join(save_dir, f"RatK_by_models")
 
+    plt.savefig(out)
+    plt.close(fig)
+
+    return ax
+
+
+def plot_cell_type_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any], 
+                        save_dir: str = None, ax: plt.Axes = None, 
+                        fixed_palette: Dict[str, str] = model_palette,
+                        plot_inv: bool = False):
+
+    data_frame["Models"] = data_frame["Models"].replace(["AE", "MOFA"], ["Autoencoder", "MOFA+"])
+    data_frame["Models"] = data_frame["Models"].replace(["paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],                  
+                                                        ["Paired", "1%", "5%", "10%", "20%", "50%", "Random"])
+
+    configs = configs["cell_type_at_k"]
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
+    else:
+        fig = ax.get_figure()
+
+    if "cell_type_at_k_a2r" in data_frame.columns:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="cell_type_at_k_a2r")
+    
+    elif plot_inv and "cell_type_at_k_r2a" in data_frame.columns:
+        grouped_data = _group_data(data_frame, based_on=["Models", "k"], select_col="cell_type_at_k_r2a")
+    
+
+    grouped_data_stats = _compute_stats_on_grouped_data(grouped_data, stats=["mean", "std"])
+
+    max_k = grouped_data_stats["k"].max()
+    models_order = (
+        grouped_data_stats[grouped_data_stats["k"] == max_k]
+        .sort_values("mean", ascending=False)["Models"]
+        .tolist()
+    )
+    colors = _make_palette(models=models_order, fixed_palette=fixed_palette)
+
+    ax = _draw_err_bars(ax, grouped_data_stats, category="Models", x="k", y="mean", colors=colors,
+                        err_range="std", bar_format=configs["err_bar_format"], 
+                        capsize=configs["err_bar_capsize"], capthick=configs["err_bar_capthick"], 
+                        linewidth=configs["err_bar_linewidth"])
+    
+    ax = _draw_legend(ax=ax,
+                      location=configs["legend_location"],
+                      position=configs["legend_position"],
+                      title=configs["legend_title"],
+                      num_cols=configs["legend_num_cols"],
+                      font_size=configs["legend_fontsize"],
+                      is_framed=configs["legend_frame"],
+                      columnspacing=configs["legend_columnspacing"],
+                      grouped_data=grouped_data_stats,
+                      based_on="Models",
+                      colors=colors,
+                      legend_names=configs["legend_names"],
+                      order=models_order,
+                      linewidth=configs["legend_linewidth"])
+    
+    ax.set_xlabel("k", fontsize=configs["x_axis_fontsize"])
+    ax.set_ylabel("Cell type at k", fontsize=configs["y_axis_fontsize"])
+    xticks_positions = configs["xticks_positions"]
+    ax.set_xticks(xticks_positions) 
+    ax.set_xticklabels(labels=xticks_positions, fontsize=configs["xticks_fontsize"])
+    ax.tick_params(axis="y", labelsize=configs["yticks_fontsize"])
+    ax.set_ylim(configs["y_axis_range"])
+
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.tight_layout()
+    # out = os.path.join(save_dir, f"RatK_by_models.{configs['file_type']}")
+    out = os.path.join(save_dir, f"CTatK_by_models")
+
+    plt.savefig(out)
+    plt.close(fig)
+
+    return ax
+
+
+def plot_cell_type_at_k_v1(data_frame: pd.DataFrame, configs: Dict[str, Any], 
+                           save_dir: str = None, ax: plt.Axes = None, 
+                           fixed_palette: Dict[str, str] = model_palette,
+                           plot_inv: bool = False):
+    # Rename models for readability
+    data_frame = data_frame.copy()
+    data_frame["Models"] = data_frame["Models"].replace(
+        ["AE", "MOFA", "paired", "sCIN_1", "sCIN_5", "sCIN_10", "sCIN_20", "sCIN_50", "sCIN_Random"],
+        ["Autoencoder", "MOFA+", "Paired", "1%", "5%", "10%", "20%", "50%", "Random"],
+    )
+
+    configs = configs["cell_type_at_k"]
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
+    else:
+        fig = ax.get_figure()
+
+    # Choose the appropriate metric
+    metric_col = "cell_type_at_k_a2r" if "cell_type_at_k_a2r" in data_frame.columns else "cell_type_at_k_r2a"
+
+    # Group and compute only the mean
+    grouped = _group_data(data_frame, based_on=["Models", "k"], select_col=metric_col)
+    stats = _compute_stats_on_grouped_data(grouped, stats=["mean"])
+
+    # Determine model order and palette
+    max_k = stats["k"].max()
+    models_order = (
+        stats[stats["k"] == max_k]
+        .sort_values("mean", ascending=False)["Models"].tolist()
+    )
+    colors = _make_palette(models=models_order, fixed_palette=fixed_palette)
+
+    # Plot a line with points for each model, no error bars
+    for model in models_order:
+        df_model = stats[stats["Models"] == model]
+        ax.plot(
+            df_model["k"], df_model["mean"],
+            marker=configs.get("marker_style", "o"),
+            linestyle=configs.get("line_style", "-"),
+            linewidth=configs.get("line_width", 2),
+            markersize=configs.get("marker_size", 6),
+            color=colors[model],
+            label=model
+        )
+
+    # Draw legend
+    ax = _draw_legend(
+        ax=ax,
+        location=configs["legend_location"],
+        position=configs["legend_position"],
+        title=configs["legend_title"],
+        num_cols=configs["legend_num_cols"],
+        font_size=configs["legend_fontsize"],
+        is_framed=configs["legend_frame"],
+        grouped_data=stats,
+        based_on="Models",
+        colors=colors,
+        legend_names=configs["legend_names"],
+        order=models_order,
+        linewidth=configs["legend_linewidth"],
+    )
+
+    # Axes labels and styling
+    ax.set_xlabel("k", fontsize=configs["x_axis_fontsize"])
+    ax.set_ylabel("Cell type at k", fontsize=configs["y_axis_fontsize"])
+    xt = configs["xticks_positions"]
+    ax.set_xticks(xt)
+    ax.set_xticklabels([str(x) for x in xt], fontsize=configs["xticks_fontsize"])
+    ax.tick_params(axis="y", labelsize=configs["yticks_fontsize"])
+    ax.set_ylim(configs["y_axis_range"])
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+
+    plt.tight_layout()
+    out = os.path.join(save_dir, "CTatK_by_models_V1")
     plt.savefig(out)
     plt.close(fig)
 
@@ -358,6 +514,26 @@ def plot_median_rank(data_frame: pd.DataFrame,
     return _plot_boxplot(data_frame, configs, save_dir, ax,
                          y_col="norm_med_rank", order_ascending=False,
                          fixed_palette=fixed_palette)
+
+
+def plot_GC_joint(data_frame: pd.DataFrame, 
+                  configs:Dict[str, Any], 
+                  save_dir:str=None, 
+                  ax:plt.Axes=None, 
+                  fixed_palette: Dict[str, str] = model_palette):
+    
+    configs = configs["GC_joint"]
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(configs["fig_width"], configs["fig_height"]))
+    
+    else:
+        fig = ax.get_figure()
+    
+    ax = _plot_boxplot(data_frame, configs, save_dir, ax,
+                       y_col="GC_joint", order_ascending=False,
+                       fixed_palette=fixed_palette)
+    
+    return ax
 
 
 def compute_tsne_original(mod1_anndata:ad.AnnData, mod2_anndata:ad.AnnData, 
