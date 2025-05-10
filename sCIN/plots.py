@@ -88,7 +88,7 @@ def _handle_legend(
 
 
 def _draw_legend(ax:plt.Axes, location:str, position:Tuple[float, float], title:str="", num_cols:int=1, 
-                font_size:int=18, is_framed:bool=False, columnspacing:float=0.5, handletextpad=0.3, **handle_kwargs) -> plt.Axes:
+                font_size:int=18, is_framed:bool=False, columnspacing:float=0.5, handletextpad=0.5, **handle_kwargs) -> plt.Axes:
     
     legend_handles = _handle_legend(**handle_kwargs)
     ax.legend(
@@ -145,8 +145,6 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
                       num_cols=configs["legend_num_cols"],
                       font_size=configs["legend_fontsize"],
                       is_framed=configs["legend_frame"],
-                      columnspacing = configs["legend_columnspacing"],
-                      handletextpad = configs["legend_handletextpad"],
                       grouped_data=grouped_data_stats,
                       based_on="Models",
                       colors=colors,
@@ -160,8 +158,12 @@ def plot_recall_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
     ax.set_xticks(xticks_positions) 
     ax.set_xticklabels(labels=xticks_positions, fontsize=configs["xticks_fontsize"])
     ax.tick_params(axis="y", labelsize=configs["yticks_fontsize"])
+    ax.tick_params(axis="x", width=configs["x_tick_pointer_width"])
+    ax.tick_params(axis="y", width=configs["y_tick_pointer_width"])
     ax.set_ylim(configs["y_axis_range"])
 
+    ax.spines["left"].set_linewidth(configs["y_axis_linewidth"])   
+    ax.spines["bottom"].set_linewidth(configs["x_axis_linewidth"])
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
@@ -233,8 +235,12 @@ def plot_cell_type_at_k(data_frame: pd.DataFrame, configs: Dict[str, Any],
     ax.set_xticks(xticks_positions) 
     ax.set_xticklabels(labels=xticks_positions, fontsize=configs["xticks_fontsize"])
     ax.tick_params(axis="y", labelsize=configs["yticks_fontsize"])
+    ax.tick_params(axis="x", width=configs["x_tick_pointer_width"])
+    ax.tick_params(axis="y", width=configs["y_tick_pointer_width"])
     ax.set_ylim(configs["y_axis_range"])
 
+    ax.spines["left"].set_linewidth(configs["y_axis_linewidth"])   
+    ax.spines["bottom"].set_linewidth(configs["x_axis_linewidth"])
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
 
@@ -387,8 +393,15 @@ def _plot_boxplot(data_frame: pd.DataFrame, configs: Dict[str, Any], save_dir: s
         ax.set_xticklabels([], fontsize=configs["xticks_fontsize"])
     
     ax.tick_params(axis="y", labelsize=configs["yticks_fontsize"])
+    ax.tick_params(axis="x", width=configs["x_tick_pointer_width"])
+    ax.tick_params(axis="y", width=configs["y_tick_pointer_width"])
+
+    ax.spines["left"].set_linewidth(configs["y_axis_linewidth"])   
+    ax.spines["bottom"].set_linewidth(configs["x_axis_linewidth"])
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
+
+    ax.set_ylim(configs["y_axis_range"])
     
     plt.tight_layout()
     
