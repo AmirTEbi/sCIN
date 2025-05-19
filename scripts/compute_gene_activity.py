@@ -110,7 +110,7 @@ def compute_gene_activity(atac_anndata: ad.AnnData,
     )
     results = [r for r in results if r]
     genes, mats = zip(*results)
-    gene_activity = np.vstack(mats).T  # shape: cells x genes
+    gene_activity = np.vstack(mats).T  
     print(f"Computed activity for {len(genes)} genes across {gene_activity.shape[0]} cells.")
 
     if save_in_anndata:

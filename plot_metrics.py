@@ -3,7 +3,7 @@ import numpy as np
 import anndata as ad
 from sCIN.plots import (plot_recall_at_k,
                         plot_cell_type_at_k,
-                        plot_cell_type_at_k_v1,
+                        plot_gp_asw,
                         plot_GC_joint,
                         plot_asw,
                         plot_cell_type_accuracy,
@@ -52,20 +52,21 @@ def main() -> None:
 
     mpl.rcParams["backend"] = args.matplot_backend  # Set this to 'AGG' for PNG format. More on https://matplotlib.org/stable/users/explain/figure/backends.html#the-builtin-backends. 
     mpl.rc("font", family=args.matplot_font)
-    mpl.rcParams["figure.dpi"] = args.fig_dpi
-    mpl.rcParams["savefig.dpi"] = args.savefig_dpi
+    mpl.rcParams["figure.dpi"] = 1200
+    mpl.rcParams["savefig.dpi"] = 1200
 
     metrics_data_frame = pd.read_csv(args.metric_file_path)
 
     if args.plot == "recall_at_k":
         plot_recall_at_k(metrics_data_frame, 
                          configs=plots, 
-                         save_dir=args.save_dir)
+                         save_dir=args.save_dir,
+                         plot_inv=False)
     
     elif args.plot == "ASW":
         plot_asw(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "cell_type_accuracy":
-        plot_cell_type_accuracy(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
+        plot_cell_type_accuracy(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None, plot_inv=False)
     elif args.plot == "cell_type_accuracy_joint":
         plot_cell_type_accuracy_joint(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
     elif args.plot == "median_rank":
@@ -74,8 +75,8 @@ def main() -> None:
         plot_cell_type_at_k(metrics_data_frame, configs=plots, save_dir=args.save_dir)
         # plot_cell_type_at_k_v1(metrics_data_frame, configs=plots, save_dir=args.save_dir)
 
-    elif args.plot == "GC_joint":
-        plot_GC_joint(metrics_data_frame, configs=plots, save_dir=args.save_dir, ax=None)
+    elif args.plot == "gp_ASW":
+        plot_gp_asw(metrics_data_frame, save_dir=args.save_dir)
 
 
 

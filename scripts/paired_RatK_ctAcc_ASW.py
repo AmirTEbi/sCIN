@@ -9,7 +9,6 @@ import argparse
 
 
 matplotlib.rcParams["font.family"] = "sans-serif"
-# matplotlib.rcParams['font.weight'] = 'bold'
 
 def make_palette(models:list, colors:list) -> dict:
 
