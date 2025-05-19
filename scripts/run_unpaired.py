@@ -10,13 +10,13 @@ import numpy as np
 import pandas as pd
 import scanpy as sc
 import anndata as ad
-from sCIN.utils.utils import(split_full_data,
-                                   extract_counts, 
-                                   read_config, 
-                                   make_plots,
-                                   make_unpaired,
-                                   make_unpaired_random)
-from sCIN.models.sCIN import (Mod1Encoder, 
+from sCIN.utils import(split_full_data,
+                       extract_counts, 
+                       read_config, 
+                       make_plots,
+                       make_unpaired,
+                       make_unpaired_random)
+from sCIN.sCIN import (Mod1Encoder, 
                                     Mod2Encoder, 
                                     scCOOL, 
                                     train_sCIN_unpaired, 
