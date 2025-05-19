@@ -26,7 +26,7 @@ According to the data (i.e., paired or unpaired) you may run either `run_sCIN.py
 
 `--quick_test`: Just a quick test training sCIN for one epoch for debugging purpose.
 
-`num_reps`: Number of replications (Max. 10). The default is 1. 
+`--num_reps`: Number of replications (Max. 10). The default is 1. 
 
 The output results is a `csv` file consists of metrics values for sCIN across replications. 
 
