@@ -2,86 +2,44 @@
 
 ## How to add a new model
 
-First, you need to create a `YourModelName.py` file containing the training, evaluations, and helper functions of your model. For instance `sCIN.py`.
+First, you need to create a `your_model_name.py` file containing the training, evaluations, and helper functions of your model. For instance `sCIN.py` which is in `models` directory.
 
-Note that the name of the `YourModelName.py` file should be the name of your model without special characters except `_` (examples in `sCIN/models`). You should also import all related function from `YourModelName.py` file to the main script, for instance `demo_paired.py` or `demo_unpaired.py` in `demo` directory.
-
-### Paired datasets
-
-To benchamrk your framework against models used in this work (or any models in general), you can use our approach, writting two wrapper functions `train_YourMoelName()` and `get_emb_YouModelName` to prevent data leakage during training. Obviously, your data should be train/test splitted before calling `train_YourMoelName()`.
-
-`train_YourMoelName()` is responsible for training the model and get arguments such as:
-```
-    def train_YourMoelName(mod1_train, mod2_train, labels_train, epochs, settings):
-        ...
-        return trained_model
-```
-- `mod1_train`: Trainig data for data modality 1.
-- `mod2_train`: Training data for data modality 2.
-- `labels_train`: Training labels. If your model does not use labels during training, feel free to set this to `None`.
-- `epochs`: Number of training epochs
-- `settings`: Any additional model's parameters and hyperparamters which can be provided via a config file (examples are in `configs/sCIN`).
-
-`train_YourMoelName()` returns trained model object. For instance, in PyTorch a neural network can be defined as class inherting from `torch.nn.Module`. You can make an instance of this class for training which can be saved and returned.
-
-`get_emb_YouModelName` produces separate embeddings from test datasets for each modality and its arguments are as follows:
-```
-    def get_emb_YouModelName(mod1_test, mod2_test, labels_test, trained_model):
-        ...
-        return mod1_embs, mod2_embs
-```
-- `mod1_test`: Test dataset for data modality 1.
-- `mod2_test`: Test dataset for data modality 2.
-- `labels_test`: Test labels. If your model does not use labels during training, feel free to set this to `None`.
-- `trained_model`: The trained model object.
+In this file you can define `train_your_model_name` and `get_emb_your_model_name` functions. `train_your_model` get training data and training configs as parameters while `get_emb_your_model_name` accepts test dataset
 
 **It is not an obligation that `get_emb_YouModelName` returns two separate embeddings, though it is important that the training and evaluations be separated. If you want to do evaluations based on metrics used in this work, then it is necessaray to have separate embeddings for each modality**.
-These arguments are minimal and feel free to add more if needed. You can see the examples of these functions in `sCIN/models`.
 
-Moreover, you can define an `assess` function for all evaluations on embeddings (example is in `sCIN/benchmarks/assess.py`).
+Then, you may create `run_your_model_name.py` file which calls training and evaluation functions from `models/your_model_name.py` and assessment functions. You can see examples for `sCIN` and others in `scripts` directory.
 
-### Unpaired datasets
+## How to run sCIN 
 
-To replicate the results of this work for unpaired setting, you should define a training wrapper function `train_YourModelName_unapired` inside the `YourModelName.py`. This function can be like:
+If you want to run sCIN on datasets used in this work or new datasets, you should prepare each modality as an `AnnData` object. This object should have `norm_raw_counts` layer containing the normalized and preprocessed count matrix. It also should have `cell_type` in `obs` layer containig cell types for each cell. Please note that for paired datasets, cells must be the same between two modalities. For unpaired datasets, cell can be different, though there should be shared cell types among modalities. 
 
-```
-def train_YourModelName_unpaired(mod1_unpaired, mod2_unpaired, [mod1_lbls_unpaired,
-                                 mod2_lbls_unpaired], epochs, settings)
-    ...
-    return trained_model
-```
-- `mod1_unpaired`: Trainig data for data modality 1. 
-- `mod2_unpaired`: Trainig data for data modality 2.
-- `[mod1_lbls_unpaired, mod2_lbls_unpaired]`: A list of labels for both modalities.
-- `epochs`: Training epochs
-- `settings`: Model's settings and hyperparameters.
+According to the data (i.e., paired or unpaired) you may run either `run_sCIN.py` or `run_sCIN_unpaired.py` in `scripts` directory. Here are the usages of the scripts' options which are the same for the two settings:
 
-`mod1_unpaired`, `mod2_unpaired`, `[mod1_lbls_unpaired, mod2_lbls_unpaired]` can be the outputs of the the `make_unpaired` function. See `utils/utils.py`.
+`--rna_file`: One of the modalities (not just RNA) as an `AnnData` object in `h5ad` format.
 
-Note that there is no need to define a new `get_emb` function since the training is on unpaired data and evaluation is on the paired datasets.
+`--atac_file`: Another modality (not just ATAC) as an `AnnData` object in `h5ad` format.
 
-## How to add a new dataset
+`--save_dir`: Save directory for embeddings and other results.
 
-Add a new dataset in form of `key:value` to the `DATA` dictionary in `demo_paired.py` or `demo_unpaired.py`.
+`--is_inv_metrics`: Do you want to compute metrics reciprocally (modality 1 -> modality 2 and modality 2 -> modality 1)? This is used for metrics such as Recall@k where we want to see How much close the paired cells are in the embedding space.
 
-- `key`: The name of the dataset. It should be the same as the `--data` flag value, for instance "PBMC".
-- `value`: A tuple containing paths to the files of modalities. Note that input files should in `.h5ad` format. 
+`--quick_test`: Just a quick test training sCIN for one epoch for debugging purpose.
 
+`num_reps`: Number of replications (Max. 10). The default is 1. 
 
-To see how to use sCIN for paired and unpaired multi-omics integration please refer to `demo` directory.
+The output results is a `csv` file consists of metrics values for sCIN across replications. 
 
-# How to run demo scripts
+sCIN's configs are in `configs.py`. 
 
-1. Paired data integration:
+Examples:
 
 ```
 cd sCIN
-python tutorial/demo/demo_paired.py --cfg_path configs/sCIN/sCIN_pbmc.json
-```
+. .venv/bin/activate  # Activate the environment
 
-2. Unpaired data integration:
+python -m scripts.run_sCIN --rna_file data/share/Ma-2020-RNA.h5ad --atac_file data/share/Ma-2020-ATAC.h5ad --save_dir results/share/sCIN --is_inv_metrics --num_reps 10
 
-```
-cd sCIN
-python tutorial/demo/demo_unpaired.py --cfg_path configs/sCIN/sCIN_pbmc.json
+python -m scripts.run_sCIN_unpaired --rna_file data/Muto-2021/Muto-2021-RNA-pp.h5ad --atac_file data/Muto-2021/Muto-2021-ATAC-pp.h5ad --save_dir results/share/sCIN_unpaired --is_inv_metrics --num_reps 10
+ 
 ```

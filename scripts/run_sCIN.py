@@ -22,7 +22,7 @@ def setup_args():
     parser.add_argument("--save_dir", type=str)
     parser.add_argument("--is_inv_metrics", action="store_true")
     parser.add_argument("--quick_test", action="store_true")
-    parser.add_argument("--num_reps", type=int)  # max 10
+    parser.add_argument("--num_reps", type=int, default=1)  # max 10
 
     return parser
 
