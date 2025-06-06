@@ -24,7 +24,6 @@ def _make_palette(models: List[str], palette_name: str = "Paired", fixed_palette
         print(f"missing: {missing}")
         fallback_colors = sns.color_palette(palette_name, len(missing))
         
-        # Cycle through fallback colors, ensuring we have enough for the missing models
         color_cycle = itertools.cycle(fallback_colors)
         
         complete_palette = {}
@@ -32,7 +31,7 @@ def _make_palette(models: List[str], palette_name: str = "Paired", fixed_palette
             if model in fixed_palette:
                 complete_palette[model] = fixed_palette[model]
             else:
-                complete_palette[model] = next(color_cycle)  # Get the next color from the cycle
+                complete_palette[model] = next(color_cycle)  
         return complete_palette
     else:
         palette = sns.color_palette(palette_name, len(models))
