@@ -3,7 +3,7 @@
 sCIN is a neural network framework inspired based on Constrastive Learning for single-cell multi-omics data integration.
 
 ![sCIN workflow](sCIN_framework.png)
-Preprint: https://www.biorxiv.org/content/10.1101/2025.02.03.636095v1 
+Preprint: https://www.biorxiv.org/content/10.1101/2025.02.03.636095v2
 
 _sCIN codebsae is currently undergoing major revisions ans refactorings and some files are deleted or changed. The tutorial will be updated soon._
 
