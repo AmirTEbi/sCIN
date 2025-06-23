@@ -179,7 +179,7 @@ def train_sCIN(mod1_train: np.ndarray,
     scin = sCIN(mod1_encoder, mod2_encoder, t)
     scin.to(device)
     optimizer = Adam(scin.parameters(), lr=lr)
-
+    
     best_loss = float('inf')
     patience_counter = 0
     for epoch in range(epochs):
