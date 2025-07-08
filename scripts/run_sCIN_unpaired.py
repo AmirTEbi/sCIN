@@ -21,7 +21,7 @@ def setup_args():
     parser.add_argument("--save_dir", type=str)
     parser.add_argument("--is_inv_metrics", action="store_true")
     parser.add_argument("--quick_test", action="store_true")
-    parser.add_argument("--num_reps", type=int, default=1)  # max 10
+    parser.add_argument("--num_reps", type=int)  # max 10
 
     return parser
 
@@ -72,7 +72,7 @@ def main() -> None:
                                          mod2_train=atac_train,
                                          mod1_labels_train=rna_lbls_train,
                                          mod2_labels_train=atac_lbls_train,
-                                         settings=sCIN_unpaired,
+                                         settings=sCIN,
                                          save_dir=args.save_dir,
                                          is_pca=True,
                                          rep=rep,
@@ -104,12 +104,12 @@ def main() -> None:
         logging.info("Computing metrics on embeddings ...")
         ct_at_k_a2r, asw, GC_uni, GC_joint, GC_union = assess_unpaired(mod1_embs=atac_embs,
                                                                        mod2_embs=rna_embs,
-                                                                       mod1_labels=rna_lbls_test,
-                                                                       mod2_labels=atac_lbls_test,
+                                                                       mod1_labels=atac_lbls_test,
+                                                                       mod2_labels=rna_lbls_test,
                                                                        seed=seed)
         if args.is_inv_metrics:
-            ct_at_k_r2a, _, _, _, _ = assess_unpaired(mod1_embs=atac_embs,
-                                                      mod2_embs=rna_embs,
+            ct_at_k_r2a, _, _, _, _ = assess_unpaired(mod1_embs=rna_embs,
+                                                      mod2_embs=atac_embs,
                                                       mod1_labels=rna_lbls_test,
                                                       mod2_labels=atac_lbls_test,
                                                       seed=seed)
