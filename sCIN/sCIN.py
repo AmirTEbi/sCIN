@@ -269,8 +269,8 @@ def pca_with_nans(data1, data2, n_components):
     return data1_pca, data2_pca, pca1, pca2
 
 
-def train_sCIN_unpaired(mod1_train: np.ndarray, mod2_train: np.ndarray, 
-                        labels_train: list, epochs: int, settings: dict, **kwargs) -> dict:
+def train_sCIN_unpaired_simulated(mod1_train: np.ndarray, mod2_train: np.ndarray, 
+                                  labels_train: list, epochs: int, settings: dict, **kwargs) -> dict:
     """
     Train sCIN model in an unpaired setting.
 
