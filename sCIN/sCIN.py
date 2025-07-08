@@ -136,7 +136,7 @@ def train_sCIN(mod1_train: np.ndarray,
     
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    epochs = settings["epochs"]
+    epochs = settings["num_epochs"]
     t = settings.get("t", 0.07)
     lr = settings.get("learning_rate", 1e-3)
     hidden_dim = settings.get("hidden_dim", 256)

@@ -196,21 +196,26 @@ def train_sCIN_unpaired(mod1_train: np.ndarray,
     target = torch.arange(num_classes)
     target = target.to(device)
 
-    scin = sCIN(in_dim1=mod1_train_t.shape[0],
-                in_dim2=mod2_train_t.shape[0],
+    scin = sCIN(in_dim1=mod1_train_t.shape[1],
+                in_dim2=mod2_train_t.shape[1],
                 hidden_dim=hidden_dim,
-                latent_dim=latent_dim)
+                latent_dim=latent_dim,
+                t=t)
     
     scin.to(device)
     optimizer = Adam(scin.parameters(), lr=lr)
 
     best_loss = float('inf')
     patience_counter = 0
+
+    ###
+    first_ct_idx = next(iter(mod2_imputed_cell_types.values()))
+    ###
     for epoch in range(epochs):
         scin.train()
         epoch_loss = 0.0
         total_samples = 0
-        total_batches = len(mod2_imputed_cell_types[0])
+        total_batches = len(first_ct_idx)
 
         for batch in range(0, total_batches, bob):
             mod1_batch = []

@@ -196,10 +196,13 @@ def train_sCIN_ablated_unpaired(mod1_train: np.ndarray,
     target = torch.arange(num_classes)
     target = target.to(device)
 
-    scin = sCIN(in_dim1=mod1_train_t.shape[0],
-                in_dim2=mod2_train_t.shape[0],
+    batch_size = bob * num_classes
+
+    scin = sCIN(in_dim1=mod1_train_t.size(1),
+                in_dim2=mod2_train_t.size(1),
                 hidden_dim=hidden_dim,
-                latent_dim=latent_dim)
+                latent_dim=latent_dim,
+                t=t)
     
     scin.to(device)
     optimizer = Adam(scin.parameters(), lr=lr)

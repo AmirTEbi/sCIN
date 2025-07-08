@@ -205,8 +205,8 @@ def train_sCIN_ablated(mod1_train: np.ndarray,
             idx1 = torch.randperm(N1, device=device)[:batch_size]
             idx2 = torch.randperm(N2, device=device)[:batch_size]
 
-            batch1 = mod1_t[idx1]
-            batch2 = mod2_t[idx2]
+            batch1 = mod1_t[idx1].contiguous()
+            batch2 = mod2_t[idx2].contiguous()
 
             logits, _, _ = model(batch1, batch2)
             # target is diagonal matching
