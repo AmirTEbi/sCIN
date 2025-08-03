@@ -66,7 +66,6 @@ def _plot_tsne(
     bottom: float,
 ) -> None:
     os.makedirs(os.path.dirname(save_path), exist_ok=True)
-        # If a mapping file for numeric codes exists, load it to convert labels
     map_path = os.path.join(os.path.dirname(save_path), 'mapped_cell_types.txt')
     code_to_name = {}
     if os.path.exists(map_path):
@@ -74,15 +73,12 @@ def _plot_tsne(
             for line in mf:
                 line = line.strip()
                 if not line: continue
-                # Expect format code:Name or code	Name
                 parts = line.replace('	',':').split(':', 1)
                 code, name = parts[0], parts[1]
                 code_to_name[code] = name
-    # Clean and format labels, mapping codes if needed
     formatted = []
     for lbl in labels:
         lbl_str = str(lbl)
-        # map numeric code to name if available
         if lbl_str in code_to_name:
             s = code_to_name[lbl_str]
         else:
@@ -94,20 +90,18 @@ def _plot_tsne(
             s = 'a high' + s[5:]
         elif low.startswith('alow'):
             s = 'a low' + s[4:]
-        # capitalize first character
         if s:
             s = s[0].upper() + s[1:]
         formatted.append(s)
     clean_labels = np.array(formatted)
     unique_labels = np.unique(clean_labels)
     
-    # Deterministic color mapping: use existing mapping file if present, else generate & save
     mapping_file = os.path.join(os.path.dirname(save_path), 'label_color_mapping.txt')
     if os.path.exists(mapping_file):
         label_color_mapping = {}
         with open(mapping_file) as f:
             for line in f:
-                parts = line.strip().split('	', 1)  # split on tab only
+                parts = line.strip().split('	', 1)  
                 if len(parts) != 2:
                     continue
                 lbl_key, hexcol = parts
@@ -128,7 +122,7 @@ def _plot_tsne(
         colors = [mpl.colors.to_rgb(label_color_mapping[lbl]) for lbl in unique_labels]
     
     else:
-        cmap = cc.cm['glasbey_light']  # high-contrast categorical map
+        cmap = cc.cm['glasbey_light']  
         colors = [cmap(i / max(len(unique_labels)-1, 1)) for i in range(len(unique_labels))]
         label_color_mapping = {lbl: mpl.colors.to_hex(col) for lbl, col in zip(unique_labels, colors)}
         with open(mapping_file, 'w') as f:
