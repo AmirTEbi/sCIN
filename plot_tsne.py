@@ -1,52 +1,3 @@
-"""
-Usage:
-
-t-SNAE on model's embs:
-
-python tsne_pipeline.py compute_embs \
-  --emb1_file path/to/model1_embs.npy \
-  --emb2_file path/to/model2_embs.csv \
-  --label1_file path/to/model1_labels.csv \
-  --label2_file path/to/model2_labels.npy \
-  --save_embs path/to/tsne_model.npy \
-  --save_labels path/to/tsne_model_labels.npy \
-  --paired (or --unpaired)
-  --num_components 2 \
-  --init pca \
-  --learning_rate auto \
-  --seed 0
-
-Plot t-SNE embs:
-  
-python tsne_pipeline.py plot \
-  --embs_file path/to/tsne_model.npy \
-  --labels_file path/to/tsne_model_labels.npy \
-  --save_dir path/to/plots \
-  --show_legend
-
-t-SNE on original data:
-
-python tsne_pipeline.py compute_raw \
-  --mod1_file path/to/raw_mod1.h5ad \
-  --mod2_file path/to/raw_mod2.h5ad \
-  --save_embs results/raw_tsne_embs.npy \
-  --save_labels results/raw_tsne_labels.npy \
-  --paired (or --unpaired)
-  --num_components 2 \
-  --init pca \
-  --learning_rate auto \
-  --seed 0
-
-Plot t-SNE of the original data:
-  
-python tsne_pipeline.py plot \
-  --embs_file results/model_tsne_embs.npy \
-  --labels_file results/model_tsne_labels.npy \
-  --save_dir results/plots/model \
-  --show_legend
-
-"""
-
 import os
 import argparse
 from typing import Tuple, Union
@@ -330,7 +281,6 @@ def main() -> None:
     elif args.command == 'plot':
         embs = _load_array(args.embs_file)
         labels = _load_labels(args.labels_file)
-        # use user-defined plot name
         save_path = os.path.join(args.save_dir, args.plot_name)
         _plot_tsne(
             embs, labels, save_path,
